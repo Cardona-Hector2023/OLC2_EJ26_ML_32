@@ -1,0 +1,34 @@
+# FRONTEND - Next.js
+node_modules/
+.next/
+.vercel/
+
+# VARIABLES DE ENTORNO
+.env
+.env*.local
+
+# BACKEND - Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# JUPYTER NOTEBOOKS
+.ipynb_checkpoints/
+
+# MODELO ENTRENADO
+*.pkl
+*.joblib
+*.h5
+
+# DATOS SENSIBLES
+*.csv
+
+# SISTEMA OPERATIVO
+.DS_Store
+Thumbs.db
+
+# VS CODE
+.vscode/
