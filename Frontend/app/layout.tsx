@@ -20,7 +20,6 @@ export const metadata: Metadata = {
     apple: '/Icono.png',
   },
 }
-
 export default function RootLayout({
   children,
 }: Readonly<{
