@@ -151,11 +151,11 @@ El sistema indicará si existe:
 
 # Estructura del Proyecto
 
-```bash id="t5pc4t"
-Proyecto1/
+```
+OLC2_EJ26_ML32/
 │
 ├── backend/
-│   ├── app.py
+│   ├── main.py
 │   ├── controllers/
 │   ├── services/
 │   ├── models/
@@ -163,7 +163,11 @@ Proyecto1/
 │
 ├── frontend/
 │   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   └── lib/
 │   ├── public/
+│   ├── next.config.js
 │   └── package.json
 │
 └── README.md
@@ -175,13 +179,13 @@ Proyecto1/
 
 ## Clonar repositorio
 
-```bash id="ttd84h"
+```bash
 git clone https://github.com/[TuUsuario]/OLC2_EJ26_ML_32.git
 ```
 
 ## Entrar al proyecto
 
-```bash id="4x4nnx"
+```bash
 cd OLC2_EJ26_ML_32/Proyecto1
 ```
 
@@ -191,7 +195,7 @@ cd OLC2_EJ26_ML_32/Proyecto1
 
 ## Crear entorno virtual
 
-```bash id="s4wk04"
+```bash
 python -m venv venv
 ```
 
@@ -199,45 +203,31 @@ python -m venv venv
 
 ### Windows
 
-```bash id="pzrd48"
+```bash
 venv\Scripts\activate
 ```
 
 ### Linux / Mac
 
-```bash id="1p35zj"
+```bash
 source venv/bin/activate
 ```
 
 ## Instalar dependencias
 
-```bash id="zuh13k"
+```bash
 pip install -r requirements.txt
 ```
 
 ## Ejecutar servidor
 
-```bash id="2bp9ku"
-python app.py
+```bash
+uvicorn main:app --reload
 ```
 
 ---
 
-# Configuración Frontend
-
-## Instalar dependencias
-
-```bash id="bzy8s9"
- pnpm install
-```
-
-## Ejecutar aplicación
-
-```bash id="mwpt8u"
-pnpm dev
-```
-
----
+# Configuración
 
 # Flujo Básico de Uso
 
