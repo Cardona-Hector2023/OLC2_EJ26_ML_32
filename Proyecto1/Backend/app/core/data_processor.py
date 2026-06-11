@@ -1,7 +1,9 @@
 import pandas as pd
 import os
 
-STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage") # Nos ayuda a poder encontrar la carpeta storage donde estara el dataset.
+
+# Esta sección es para guardar el dataframe original. desde set_original_data hasta save_clean_csv ---------------------------------------------------------
 
 # Variables en memoria para evitar recargar desde disco continuamente
 _original_df = None
@@ -9,7 +11,7 @@ _clean_df = None
 
 # Nos ayuda a poder guardar el dataframe original en memoria.
 def set_original_data(df: pd.DataFrame):
-    """Guarda el dataframe original en memoria."""
+    """Guarda el dataframe original en memoria en el directorio storage."""
     global _original_df
     _original_df = df
 
@@ -41,4 +43,12 @@ def save_clean_csv(df: pd.DataFrame):
 
 
 
+# CARDONA puedes empezar a programar aquí ----------------------------------------------------------------------------------
 # Aquí agregaremos después las funciones puras de limpieza...  Aqui puedes empezar a programar el manejo de tu archivo CSV  -----------------------------
+
+# Ejemplo (podes eliminarlo o dejarlo)
+def limpiar_datos():
+    # . PIDE LOS DATOS QUE TÚ CARGASTE EN EL PASO ANTERIOR
+    df = get_original_data()
+    
+    #Demás código de limpieza...
