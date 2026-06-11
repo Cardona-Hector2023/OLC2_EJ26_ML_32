@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router
 
 app = FastAPI(
-    title="CreditGuard API",
+    title="CreditGuard API - Grupo 32",
     description="Backend para predicción de riesgo crediticio",
     version="1.0.0"
 )
