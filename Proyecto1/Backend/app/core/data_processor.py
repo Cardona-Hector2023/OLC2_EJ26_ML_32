@@ -165,13 +165,23 @@ def limpiar_datos() -> dict:
     # ── Guardar resultado ──────────────────────────────────────────────────────
     save_clean_csv(df)
  
-    reporte["registros_finales"] = len(df)
-    reporte["mensaje"] = (
-        f"{reporte['registros_finales']} registros listos. "
-        f"{reporte['duplicados_eliminados']} duplicados eliminados, "
-        f"{reporte['registros_basura_eliminados']} registros basura eliminados, "
-        f"{reporte['inconsistencias_convertidas_a_nan']} inconsistencias corregidas, "
-        f"{reporte['nulos_imputados']} valores nulos imputados."
-    )
- 
-    return reporte
+    filas_originales = len(get_original_data())
+    filas_eliminadas = reporte["duplicados_eliminados"] + reporte["registros_basura_eliminados"]
+
+    return {
+        # Campos que consume el frontend
+        "filas_originales":             filas_originales,
+        "filas_resultantes":            len(df),
+        "filas_eliminadas":             filas_eliminadas,
+        "valores_imputados":            reporte["nulos_imputados"],
+        # Campos extra para reporte detallado (pueden ser útiles para debugging o futuras mejoras)
+        "duplicados_eliminados":        reporte["duplicados_eliminados"],
+        "registros_basura_eliminados":  reporte["registros_basura_eliminados"],
+        "inconsistencias_corregidas":   reporte["inconsistencias_convertidas_a_nan"],
+        "mensaje": (
+            f"{len(df)} registros listos. "
+            f"{filas_eliminadas} eliminados, "
+            f"{reporte['inconsistencias_convertidas_a_nan']} inconsistencias corregidas, "
+            f"{reporte['nulos_imputados']} valores nulos imputados."
+        )
+    }   
