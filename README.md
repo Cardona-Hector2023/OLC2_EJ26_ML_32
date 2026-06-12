@@ -78,7 +78,56 @@ Por ejemplo:
 * Validación de rangos inválidos
 * Normalización de datos
 
+## Estrategia de Limpieza y Preprocesamiento de Datos Crediticios
+
+## 1. Tratamiento de Duplicados y Registro Basura
+
+* **Duplicados:**
+    * *Acción:* Eliminación directa. 
+    * *Justificación:* Un registro idéntico en datos crediticios no representa una segunda solicitud real, sino un error de carga en el sistema.
+* **Registro basura completo (todos en cero):**
+    * *Acción:* Se elimina antes de cualquier otra etapa de limpieza.
+    * *Justificación:* Intentar imputar datos sobre una fila completamente inválida introduciría "ruido fabricado" que alteraría el análisis.
+
 ---
+
+## 2. Inconsistencias y Valores Fuera de Rango
+
+> **Principio de diseño:** La razón de convertir los valores inconsistentes a `NaN` antes de imputar es mantener un solo punto de control unificado para todos los valores faltantes, evitando tener lógica dispersa a lo largo del código.
+
+| Campo | Problema | Estrategia |
+| :--- | :--- | :--- |
+| `ingresos_mensuales` | Negativos o cero | Convertir a `NaN` → luego imputar con mediana |
+| `monto_solicitado` | Igual a cero | Convertir a `NaN` → luego imputar con mediana |
+| `historial_pagos` | Fuera del rango 0–100 | Convertir a `NaN` → luego imputar con mediana |
+| `utilizacion_credito` | Fuera del rango 0–100 | Convertir a `NaN` → luego imputar con mediana |
+| `antiguedad_laboral` | Negativa | Convertir a `NaN` → luego imputar con mediana |
+| `deuda_activa` | Igual a cero | **Se conserva** — un solicitante sin deuda activa es un escenario perfectamente válido. |
+| `creditos_activos` | Igual a cero | **Se conserva** — también representa un caso real y válido. |
+
+---
+
+## 3. Tratamiento de Valores Faltantes
+*(Aplicado tras la conversión de inconsistencias a `NaN`)*
+
+| Campo | Estrategia | Razón |
+| :--- | :--- | :--- |
+| `ingresos_mensuales`<br>`deuda_activa`<br>`monto_solicitado` | **Mediana** | Campos monetarios con alta varianza y presencia de *outliers* (valores atípicos); la mediana es más robusta que la media. |
+| `historial_pagos`<br>`utilizacion_credito` | **Mediana** | Porcentajes acotados pero con una distribución potencialmente asimétrica. |
+| `antiguedad_laboral` | **Mediana** | Razón similar; valores enteros positivos con distribución sesgada. |
+| `atrasos_previos`<br>`dependientes_economicos`<br>`creditos_activos` | **Moda** | Valores enteros pequeños y discretos; la moda refleja fielmente el caso más frecuente. |
+
+---
+
+## 4. Estandarización de Datos
+
+Al final del proceso se aplica `StandardScaler` sobre todas las columnas numéricas de entrada (excluyendo la variable objetivo `en_riesgo`).
+
+* **¿Por qué es necesario?** Los rangos de las variables son muy dispares. Por ejemplo, `ingresos_mensuales` puede oscilar entre miles y decenas de miles, mientras que `atrasos_previos` se mantiene en un rango corto de 0 a 7.
+* **Impacto:** Sin este escalamiento, el modelo de Machine Learning le otorgaría de forma implícita un mayor peso a las variables de gran magnitud, sesgando los resultados.
+
+---
+
 
 ## Entrenamiento del Modelo
 
