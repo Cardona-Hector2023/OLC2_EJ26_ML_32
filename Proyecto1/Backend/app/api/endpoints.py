@@ -2,6 +2,8 @@ from fastapi.middleware import asyncexitstack
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import io
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 from app.core import data_processor
 
 router = APIRouter() # Nos ayuda a poder enrutar las rutas.
@@ -39,6 +41,7 @@ async def cargar_csv(archivo: UploadFile = File(...)):
         data_processor.set_original_data(df)
         data_processor.save_original_csv(df)
         
+        #print(df.tail()) # Esto es para que se vea el dataframe en la terminal, lo puedes borrar si quieres.
         return {
             "filas": int(df.shape[0]),
             "columnas": int(df.shape[1]),
@@ -54,10 +57,22 @@ async def cargar_csv(archivo: UploadFile = File(...)):
 
 # CARDONA podes empezar a programar aquí ----------------------------------------------------------------------------------
 # Los próximos endpoints (limpieza, entrenamiento, predicción) irán aquí abajo...
+
+# ── Limpieza de datos ──────────────────────────────────────────────────────────
 @router.post("/limpieza")
 async def limpiar_datos_api():
-    return 0 # podes borrar esto xd
-    #Demás código...
+    """
+    Ejecuta el pipeline de limpieza sobre los datos cargados y devuelve
+    un reporte con los cambios realizados.
+    """
+    try:
+        reporte = data_processor.limpiar_datos()
+        return reporte
+    except ValueError as e:
+        # Sin datos cargados previamente
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante la limpieza: {str(e)}")
 
 @router.post("/entrenamiento")
 async def entrenar_modelo_api():
