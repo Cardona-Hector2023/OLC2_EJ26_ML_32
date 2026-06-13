@@ -22,12 +22,14 @@ const HPARAMS_INICIALES: Hiperparametros = {
 
 export default function Page() {
   const [metricas, setMetricas] = useState<Metricas | null>(null)
+  const [resultadoEntrenamiento, setResultadoEntrenamiento] = useState<EntrenamientoResult | null>(null)
   const [modeloEntrenado, setModeloEntrenado] = useState(false)
   const [hiperparametros, setHiperparametros] =
     useState<Hiperparametros>(HPARAMS_INICIALES)
 
   function handleEntrenado(m: Metricas, res: EntrenamientoResult) {
     setMetricas(m)
+    setResultadoEntrenamiento(res)
     setModeloEntrenado(true)
     if (res.hiperparametros) setHiperparametros(res.hiperparametros)
   }
@@ -61,10 +63,11 @@ export default function Page() {
           </TabsContent>
 
           <TabsContent value="modelo" className="space-y-6">
-            <PanelMetricas metricas={metricas} />
+            <PanelMetricas resultado={resultadoEntrenamiento} />
             <AjusteHiperparametros
               modeloEntrenado={modeloEntrenado}
               hiperparametros={hiperparametros}
+              metricasActuales={metricas}
               onReentrenado={handleEntrenado}
             />
           </TabsContent>

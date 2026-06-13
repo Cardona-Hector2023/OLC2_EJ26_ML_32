@@ -24,6 +24,7 @@ import type {
 interface Props {
   modeloEntrenado: boolean
   hiperparametros: Hiperparametros
+  metricasActuales: Metricas | null
   onReentrenado: (metricas: Metricas, resultado: EntrenamientoResult) => void
 }
 
@@ -66,10 +67,14 @@ const HPARAMS: HParamConfig[] = [
 export function AjusteHiperparametros({
   modeloEntrenado,
   hiperparametros,
+  metricasActuales,
   onReentrenado,
 }: Props) {
   const [valores, setValores] = useState<Hiperparametros>(hiperparametros)
   const [reentrenando, setReentrenando] = useState(false)
+  const [metricasAnteriores, setMetricasAnteriores] = useState<Metricas | null>(null)
+  const [metricasNuevas, setMetricasNuevas] = useState<Metricas | null>(null)
+  const [mostrarComparativa, setMostrarComparativa] = useState(false)
 
   function actualizar(key: keyof Hiperparametros, valor: number) {
     setValores((prev) => ({ ...prev, [key]: valor }))
@@ -89,7 +94,15 @@ export function AjusteHiperparametros({
 
     setReentrenando(true)
     try {
+      // Guardar métricas actuales antes de reentrenar
+      const prevMetricas = metricasActuales ? { ...metricasActuales } : null
+      
       const res = await reentrenarModelo(valores)
+      
+      setMetricasAnteriores(prevMetricas)
+      setMetricasNuevas(res.metricas)
+      setMostrarComparativa(true)
+      
       onReentrenado(res.metricas, res)
       toast.success('Modelo reentrenado', {
         description: `Nueva exactitud: ${(res.metricas.exactitud * 100).toFixed(1)}%.`,
@@ -170,6 +183,61 @@ export function AjusteHiperparametros({
           <p className="text-xs text-muted-foreground">
             Entrena el modelo al menos una vez antes de ajustar hiperparámetros.
           </p>
+        )}
+
+        {/* Tabla Comparativa de Rendimiento */}
+        {mostrarComparativa && metricasAnteriores && metricasNuevas && (
+          <div className="mt-8 space-y-4 border-t pt-6">
+            <div>
+              <h3 className="text-lg font-semibold">Comparativa de Rendimiento</h3>
+              <p className="text-sm text-muted-foreground">
+                Resultado tras el último reentrenamiento
+              </p>
+            </div>
+            
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Métrica</th>
+                    <th className="px-4 py-3 text-center font-medium border-l">Antes</th>
+                    <th className="px-4 py-3 text-center font-medium border-l">Después</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {[
+                    { key: 'exactitud', label: 'Exactitud' },
+                    { key: 'precision', label: 'Precisión' },
+                    { key: 'recall', label: 'Recall' },
+                    { key: 'f1_score', label: 'F1 Score' },
+                  ].map((item) => {
+                    const k = item.key as keyof Metricas
+                    const valAntes = metricasAnteriores[k]
+                    const valDespues = metricasNuevas[k]
+                    const mejoro = valDespues >= valAntes
+                    
+                    return (
+                      <tr key={item.key} className="bg-card hover:bg-muted/50">
+                        <td className="px-4 py-3 font-medium text-muted-foreground">{item.label}</td>
+                        <td className="px-4 py-3 text-center border-l text-muted-foreground">
+                          {(valAntes * 100).toFixed(1)}%
+                        </td>
+                        <td className={`px-4 py-3 text-center border-l font-semibold ${mejoro ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                          {(valDespues * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-900 p-4 mt-4">
+              <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400 flex items-center gap-2">
+                <span>✓</span> Reentrenamiento completado exitosamente. El nuevo modelo ha sido guardado.
+              </p>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

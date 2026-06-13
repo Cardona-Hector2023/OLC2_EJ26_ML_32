@@ -29,6 +29,18 @@ export interface Metricas {
   f1_score: number
 }
 
+export interface MatrizConfusion {
+  tn: number
+  fp: number
+  fn: number
+  tp: number
+}
+
+export interface DistribucionPredicciones {
+  sin_riesgo: number
+  en_riesgo: number
+}
+
 /** Resultado de la carga masiva del CSV. */
 export interface CargaResult {
   filas: number
@@ -51,6 +63,8 @@ export interface LimpiezaResult {
 /** Resultado del entrenamiento o reentrenamiento. */
 export interface EntrenamientoResult {
   metricas: Metricas
+  matriz_confusion?: MatrizConfusion
+  distribucion_predicciones?: DistribucionPredicciones
   hiperparametros: Hiperparametros
   filas_entrenamiento?: number
   filas_prueba?: number
