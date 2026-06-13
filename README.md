@@ -136,6 +136,38 @@ Con los datos ya procesados, el sistema permite entrenar un modelo de aprendizaj
 El modelo es desarrollado completamente en Python y no utiliza APIs externas ni modelos preentrenados.
 
 ---
+## Propuesta de Modelo: Random Forest
+
+**Random Forest** es un modelo de ensamble que combina múltiples árboles de decisión para obtener una predicción final mediante un sistema de votación por mayoría. Para un caso de **riesgo crediticio**, este algoritmo es la opción ideal debido a su robustez, interpretabilidad y alineación con los requerimientos del problema.
+
+---
+
+## Justificación Técnica del Modelo
+
+### 1. Tolerancia a Datos Financieros Complejos
+Los datos de crédito suelen presentar distribuciones asimétricas (por ejemplo, ingresos de los clientes) y valores atípicos (*outliers*). Random Forest maneja estos escenarios de forma excelente sin necesidad de transformaciones matemáticas complejas o una limpieza de datos perfecta.
+
+### 2. Control Nativo del Sobreajuste (*Overfitting*)
+A diferencia de un árbol de decisión único (que tiende a memorizar los datos de entrenamiento), Random Forest promedia los resultados de decenas o cientos de árboles independientes. Esta combinación reduce drásticamente la varianza y garantiza que el modelo generalice bien ante nuevos clientes.
+
+### 3. Explicabilidad Financiera (*Feature Importance*)
+El algoritmo calcula de forma nativa qué variables (como historial de pagos, nivel de ingresos o nivel de endeudamiento) tienen mayor peso en la predicción. En el sector bancario, esto es fundamental para auditar el modelo y justificar legal o institucionalmente la aprobación o rechazo de un crédito.
+
+### 4. Alineación con los Requerimientos del Proyecto
+Los hiperparámetros solicitados en el diseño del proyecto son la "firma" indiscutible de este algoritmo:
+
+| Hiperparámetro | Función en el Modelo |
+| :--- | :--- |
+| **Cantidad de árboles** | Define el tamaño del ensamble (a mayor número, más estabilidad). |
+| **Profundidad máxima** | Controla el nivel de detalle y complejidad de cada árbol. |
+| **Hojas por árbol (Mín. muestras)** | Evita que los árboles creen reglas demasiado específicas para pocos clientes. |
+
+>  **Conclusión:** La coincidencia exacta de estos parámetros sugiere que la arquitectura del proyecto fue diseñada por el catedrático pensando específicamente en la implementación de Random Forest.
+
+---
+
+##  Ventaja Estratégica
+El modelo ofrece el equilibrio perfecto: brinda la **alta precisión** de los modelos modernos de Machine Learning sin convertirse en una "caja negra" indescifrable, manteniendo una lógica conceptual fácil de defender en una presentación académica o profesional.
 
 ## Evaluación del Modelo
 
