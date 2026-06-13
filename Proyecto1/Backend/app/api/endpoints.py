@@ -109,6 +109,18 @@ class HiperparametrosIn(BaseModel):
     profundidad_maxima: int
     hojas_maximas: int
 
+# NOTA: Modelo para recibir los datos de un solicitante individual -----------------------------------------------------------------
+class SolicitanteInput(BaseModel):
+    ingresos_mensuales: float
+    deuda_activa: float
+    historial_pagos: float
+    antiguedad_laboral: float
+    creditos_activos: float
+    monto_solicitado: float
+    atrasos_previos: float
+    dependientes_economicos: float
+    utilizacion_credito: float
+
 @router.post("/reentrenamiento")  
 async def ajustar_hiperparametros_api(hiperparametros: HiperparametrosIn):
     try:
@@ -127,7 +139,13 @@ async def ajustar_hiperparametros_api(hiperparametros: HiperparametrosIn):
 async def metricas_modelo_api():
     return 0 
 
-@router.post("/prediccion-individual")
-async def predecir_riesgo_individual_api():
-    return 0  
+@router.post("/prediccion")
+async def predecir_riesgo_individual_api(solicitante: SolicitanteInput):
+    try:
+        resultado = data_processor.predecir_individual(solicitante.model_dump())
+        return resultado
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al realizar la predicción: {str(e)}")
 #----------------------------------------------------------------------------------------------------------------------------------

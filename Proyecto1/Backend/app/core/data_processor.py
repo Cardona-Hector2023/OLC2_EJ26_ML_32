@@ -35,7 +35,12 @@ def set_original_data(df: pd.DataFrame):
 
 # Nos ayuda a poder obtener el dataframe original de la memoria.
 def get_original_data() -> pd.DataFrame:
-    """Devuelve el dataframe original de la memoria."""
+    """Devuelve el dataframe original de la memoria o el disco."""
+    global _original_df
+    if _original_df is None:
+        filepath = os.path.join(STORAGE_DIR, "dataset_original.csv")
+        if os.path.exists(filepath):
+            _original_df = pd.read_csv(filepath)
     return _original_df
 
 # Nos ayuda a poder guardar un respaldo del CSV original en storage/.
@@ -47,7 +52,12 @@ def save_original_csv(df: pd.DataFrame):
 
 # Nos ayuda a poder obtener el dataframe limpio de la memoria.
 def get_clean_data() -> pd.DataFrame:
-    """Devuelve el dataframe limpio."""
+    """Devuelve el dataframe limpio de la memoria o del disco."""
+    global _clean_df
+    if _clean_df is None:
+        filepath = os.path.join(STORAGE_DIR, "dataset_clean.csv")
+        if os.path.exists(filepath):
+            _clean_df = pd.read_csv(filepath)
     return _clean_df
 # Nos ayuda a poder guardar el dataframe limpio en memoria y en storage/.
 def save_clean_csv(df: pd.DataFrame):
@@ -218,3 +228,36 @@ def entrenar_modelo(hiperparametros: dict = None) -> dict:
     if df is None:
         raise ValueError("No hay datos limpios. Ejecuta primero la limpieza de datos.")
     return model_manager.train(df, hiperparametros)
+
+# ── Predicción Individual ──────────────────────────────────────────────────────
+
+def predecir_individual(datos: dict) -> dict:
+    global _scaler
+    
+    if _scaler is None:
+        path_scaler = os.path.join(STORAGE_DIR, "scaler.pkl")
+        if os.path.exists(path_scaler):
+            with open(path_scaler, "rb") as f:
+                _scaler = pickle.load(f)
+        else:
+            raise ValueError("El escalador no existe. Por favor realiza la limpieza de datos primero.")
+            
+    try:
+        df_individual = pd.DataFrame([datos], columns=COLUMNAS_FEATURES)
+    except KeyError as e:
+         raise ValueError(f"Falta una columna esperada: {str(e)}")
+         
+    df_escalado = _scaler.transform(df_individual)
+    
+    modelo = model_manager.obtener_modelo()
+    if modelo is None:
+        raise ValueError("El modelo no está entrenado. Por favor entrena el modelo primero.")
+        
+    prediccion = modelo.predict(df_escalado)[0]
+    probabilidad = modelo.predict_proba(df_escalado)[0][1]
+    
+    return {
+        "riesgo": bool(prediccion == 1),
+        "probabilidad": float(probabilidad),
+        "mensaje": "Predicción generada con éxito"
+    }
