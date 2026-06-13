@@ -197,8 +197,8 @@ def limpiar_datos() -> dict:
     # ── Guardar resultado ──────────────────────────────────────────────────────
     save_clean_csv(df)
  
-    #filas_originales = len(get_original_data())
-    #filas_eliminadas = reporte["duplicados_eliminados"] + reporte["registros_basura_eliminados"]
+    filas_originales = len(get_original_data())
+    filas_eliminadas = reporte["duplicados_eliminados"] + reporte["registros_basura_eliminados"]
 
     reporte["registros_finales"] = len(df)
     reporte["mensaje"] = (
@@ -209,7 +209,14 @@ def limpiar_datos() -> dict:
         f"{reporte['nulos_imputados']} valores nulos imputados."
     )
  
-    return reporte
+    return {
+        "filas_originales": filas_originales,
+        "filas_resultantes": reporte["registros_finales"],
+        "filas_eliminadas": filas_eliminadas,
+        "valores_imputados": reporte["nulos_imputados"],
+        "inconsistencias_corregidas": reporte["inconsistencias_convertidas_a_nan"],
+        "mensaje": reporte["mensaje"]
+    }
 
 # ── Entrenamiento ──────────────────────────────────────────────────────────────
  
