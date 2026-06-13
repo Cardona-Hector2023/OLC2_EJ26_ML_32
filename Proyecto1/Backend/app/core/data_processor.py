@@ -2,11 +2,9 @@ import pandas as pd
 import numpy as np
 import os
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import os
 import pickle
+from app.core.model_manager import model_manager
 
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage") # Nos ayuda a poder encontrar la carpeta storage donde estara el dataset.
 
@@ -29,11 +27,6 @@ HIPERPARAMETROS_DEFAULT = {
 _original_df = None
 _clean_df = None
 _scaler = None  # StandardScaler ajustado durante la limpieza, se reutiliza en predicción
-_modelo      = None   # RandomForestClassifier entrenado
-_metricas    = None   # Métricas del último entrenamiento
-_hiperparams = None   # Hiperparámetros usados en el último entrenamiento
-
-
 # Nos ayuda a poder guardar el dataframe original en memoria.
 def set_original_data(df: pd.DataFrame):
     """Guarda el dataframe original en memoria en el directorio storage."""
@@ -70,17 +63,17 @@ def get_scaler() -> StandardScaler:
     """Devuelve el scaler ajustado durante la limpieza."""
     return _scaler
  
-def get_modelo() -> RandomForestClassifier:
+def get_modelo():
     """Devuelve el modelo entrenado o None si aún no se ha entrenado."""
-    return _modelo
+    return model_manager.get_modelo()
  
 def get_metricas() -> dict:
     """Devuelve las métricas del último entrenamiento."""
-    return _metricas
+    return model_manager.get_metricas()
  
 def get_hiperparametros() -> dict:
     """Devuelve los hiperparámetros usados en el último entrenamiento."""
-    return _hiperparams
+    return model_manager.get_hiperparametros()
 
 
 # CARDONA puedes empezar a programar aquí ----------------------------------------------------------------------------------
@@ -221,127 +214,7 @@ def limpiar_datos() -> dict:
 # ── Entrenamiento ──────────────────────────────────────────────────────────────
  
 def entrenar_modelo(hiperparametros: dict = None) -> dict:
-    """
-    Entrena un RandomForestClassifier con los datos ya limpios.
- 
-    Usa los hiperparámetros recibidos o los valores por defecto si no se pasan.
-    Divide los datos en 80 % entrenamiento / 20 % prueba con estratificación
-    para respetar la proporción de clases.
- 
-    Args:
-        hiperparametros: dict opcional con claves n_arboles, profundidad_maxima,
-                         hojas_maximas. Valores fuera de rango son ignorados y
-                         se sustituyen por los defaults.
- 
-    Returns:
-        dict con metricas, hiperparametros, filas_entrenamiento, filas_prueba y mensaje.
- 
-    Raises:
-        ValueError si no hay datos limpios disponibles.
-    """
-    global _modelo, _metricas, _hiperparams
- 
     df = get_clean_data()
     if df is None:
         raise ValueError("No hay datos limpios. Ejecuta primero la limpieza de datos.")
- 
-    # ── Validar y normalizar hiperparámetros ───────────────────────────────────
-    hp = dict(HIPERPARAMETROS_DEFAULT)  # partir de los defaults
- 
-    if hiperparametros:
-        # n_arboles: rango recomendado 50–500
-        n = int(hiperparametros.get("n_arboles", hp["n_arboles"]))
-        hp["n_arboles"] = max(10, min(n, 1000))
- 
-        # profundidad_maxima: rango recomendado 5–30
-        p = int(hiperparametros.get("profundidad_maxima", hp["profundidad_maxima"]))
-        hp["profundidad_maxima"] = max(2, min(p, 100))
- 
-        # hojas_maximas: rango recomendado 10–200
-        h = int(hiperparametros.get("hojas_maximas", hp["hojas_maximas"]))
-        hp["hojas_maximas"] = max(2, min(h, 500))
- 
-    # ── Separar features y etiqueta ────────────────────────────────────────────
-    X = df[COLUMNAS_FEATURES]
-    y = df["en_riesgo"]
- 
-    # Estratificado para mantener la proporción de clases en ambos conjuntos
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y,
-    )
- 
-    # ── Entrenar Random Forest ─────────────────────────────────────────────────
-    modelo = RandomForestClassifier(
-        n_estimators=hp["n_arboles"],
-        max_depth=hp["profundidad_maxima"],
-        max_leaf_nodes=hp["hojas_maximas"],
-        random_state=42,
-        n_jobs=-1,          # usar todos los núcleos disponibles
-        class_weight="balanced",  # compensa desequilibrio de clases si lo hay
-    )
-    modelo.fit(X_train, y_train)
- 
-    # ── Evaluar en el conjunto de prueba ───────────────────────────────────────
-    y_pred = modelo.predict(X_test)
- 
-    metricas = {
-        "exactitud":  round(float(accuracy_score(y_test, y_pred)),  4),
-        "precision":  round(float(precision_score(y_test, y_pred, zero_division=0)), 4),
-        "recall":     round(float(recall_score(y_test, y_pred, zero_division=0)),    4),
-        "f1_score":   round(float(f1_score(y_test, y_pred, zero_division=0)),        4),
-    }
-
-    # >>>NOTA<<<: Esto es nuevo del proyecto :D  para que funcione con el frontend att: Pablo ----------------------------------------------------------------------------
-    cm = confusion_matrix(y_test, y_pred)
-    # Por si acaso solo hay una clase predicha en un dataset muy pequeño
-    if cm.size == 1:
-        if sum(y_test) == 0:
-            tn, fp, fn, tp = cm[0][0], 0, 0, 0
-        else:
-            tn, fp, fn, tp = 0, 0, 0, cm[0][0]
-    else:
-        tn, fp, fn, tp = cm.ravel()
-        
-    matriz_confusion = {
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
-        "tp": int(tp)
-    }
-
-    dist_predicciones = {
-        "sin_riesgo": int(sum(y_pred == 0)),
-        "en_riesgo": int(sum(y_pred == 1))
-    }
- # -------------------------------------------------------------------------------------------------------------------------------------
-
-    # ── Persistir modelo en disco ──────────────────────────────────────────────
-    os.makedirs(STORAGE_DIR, exist_ok=True)
-    with open(os.path.join(STORAGE_DIR, "modelo.pkl"), "wb") as f:
-        pickle.dump(modelo, f)
- 
-    # ── Actualizar estado global ───────────────────────────────────────────────
-    _modelo      = modelo
-    _metricas    = metricas
-    _hiperparams = hp
- 
-    return {
-        "metricas": metricas,
-        "matriz_confusion": matriz_confusion,  #Nuevo pablo
-        "distribucion_predicciones": dist_predicciones,  #Nuevo pablo
-        "hiperparametros": {
-            "n_arboles":          hp["n_arboles"],
-            "profundidad_maxima": hp["profundidad_maxima"],
-            "hojas_maximas":      hp["hojas_maximas"],
-        },
-        "filas_entrenamiento": int(len(X_train)),
-        "filas_prueba":        int(len(X_test)),
-        "mensaje": (
-            f"Modelo entrenado con {len(X_train)} registros. "
-            f"Exactitud: {metricas['exactitud']*100:.1f}%, "
-            f"F1: {metricas['f1_score']*100:.1f}%."
-        ),
-    }
+    return model_manager.train(df, hiperparametros)
