@@ -83,20 +83,25 @@ async def limpiar_datos_api():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante la limpieza: {str(e)}")
 
+# ── Entrenamiento ──────────────────────────────────────────────────────────────
 @router.post("/entrenamiento")
 async def entrenar_modelo_api():
-    return 0 # podes borrar esto xd
-    #Demás código...
+    """
+    Entrena el Random Forest con los hiperparámetros por defecto y
+    devuelve métricas + detalles del split. Responde con EntrenamientoResult.
+    """
+    try:
+        resultado = data_processor.entrenar_modelo()
+        return resultado
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante el entrenamiento: {str(e)}")
 
 @router.post("/reentrenamiento")  #Esto es para lo de Hiperparametros para reentrenar el modelo, por eso lo llame así
 async def ajustar_hiperparametros_api():
     return 0 # podes borrar esto xd
     #Demás código...
-
-
-
-
-
 
 #ESTO LO HACE PABLO (OSEA YO XD)---------------------------------------------------------------------------------------------------
 @router.get("/metricas")
