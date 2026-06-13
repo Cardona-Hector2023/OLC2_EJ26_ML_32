@@ -102,7 +102,7 @@ export function PanelMetricas({ resultado }: Props) {
             <div className="grid gap-4 sm:grid-cols-2">
               {ITEMS.map(({ key, label, descripcion, icon: Icon }) => {
                 const valor = metricas[key]
-                const pct = Math.round(valor * 100)
+                const pct =valor * 100 //ya no lo redondea al entero mas cercano, sino que lo muestra con decimales 
                 return (
                   <div
                     key={key}
@@ -117,9 +117,9 @@ export function PanelMetricas({ resultado }: Props) {
                       </div>
                       <span
                         className={`font-mono text-2xl font-semibold ${colorPorValor(valor)}`}
-                      >
-                        {pct}%
-                      </span>
+                      > 
+                        {pct.toFixed(2)}% 
+                      </span> 
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">{descripcion}</p>
                     <Progress value={pct} className="mt-3" />
