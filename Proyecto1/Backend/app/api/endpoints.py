@@ -1,5 +1,6 @@
 from fastapi.middleware import asyncexitstack
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from pydantic import BaseModel
 import io
 import pandas as pd
 import numpy as np
@@ -98,10 +99,28 @@ async def entrenar_modelo_api():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante el entrenamiento: {str(e)}")
 
-@router.post("/reentrenamiento")  #Esto es para lo de Hiperparametros para reentrenar el modelo, por eso lo llame así
-async def ajustar_hiperparametros_api():
-    return 0 # podes borrar esto xd
-    #Demás código...
+
+
+
+
+# NOTA: Modelo para recibir hiperparámetros, agregado por Pablo para que funcione :D -----------------------------------------------------------------
+class HiperparametrosIn(BaseModel):
+    n_arboles: int
+    profundidad_maxima: int
+    hojas_maximas: int
+
+@router.post("/reentrenamiento")  
+async def ajustar_hiperparametros_api(hiperparametros: HiperparametrosIn):
+    try:
+        resultado = data_processor.entrenar_modelo(hiperparametros.model_dump())
+        return resultado
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante el reentrenamiento: {str(e)}")
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 
 #ESTO LO HACE PABLO (OSEA YO XD)---------------------------------------------------------------------------------------------------
 @router.get("/metricas")

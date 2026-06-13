@@ -4,7 +4,7 @@ import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import os
 import pickle
 
@@ -286,7 +286,31 @@ def entrenar_modelo(hiperparametros: dict = None) -> dict:
         "recall":     round(float(recall_score(y_test, y_pred, zero_division=0)),    4),
         "f1_score":   round(float(f1_score(y_test, y_pred, zero_division=0)),        4),
     }
- 
+
+    # >>>NOTA<<<: Esto es nuevo del proyecto :D  para que funcione con el frontend att: Pablo ----------------------------------------------------------------------------
+    cm = confusion_matrix(y_test, y_pred)
+    # Por si acaso solo hay una clase predicha en un dataset muy pequeño
+    if cm.size == 1:
+        if sum(y_test) == 0:
+            tn, fp, fn, tp = cm[0][0], 0, 0, 0
+        else:
+            tn, fp, fn, tp = 0, 0, 0, cm[0][0]
+    else:
+        tn, fp, fn, tp = cm.ravel()
+        
+    matriz_confusion = {
+        "tn": int(tn),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tp": int(tp)
+    }
+
+    dist_predicciones = {
+        "sin_riesgo": int(sum(y_pred == 0)),
+        "en_riesgo": int(sum(y_pred == 1))
+    }
+ # -------------------------------------------------------------------------------------------------------------------------------------
+
     # ── Persistir modelo en disco ──────────────────────────────────────────────
     os.makedirs(STORAGE_DIR, exist_ok=True)
     with open(os.path.join(STORAGE_DIR, "modelo.pkl"), "wb") as f:
@@ -299,6 +323,8 @@ def entrenar_modelo(hiperparametros: dict = None) -> dict:
  
     return {
         "metricas": metricas,
+        "matriz_confusion": matriz_confusion,  #Nuevo pablo
+        "distribucion_predicciones": dist_predicciones,  #Nuevo pablo
         "hiperparametros": {
             "n_arboles":          hp["n_arboles"],
             "profundidad_maxima": hp["profundidad_maxima"],
