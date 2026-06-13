@@ -40,8 +40,17 @@ async def cargar_csv(archivo: UploadFile = File(...)):
         #Pasar el dataframe a nuestra capa core para guardarlo
         data_processor.set_original_data(df)
         data_processor.save_original_csv(df)
-        
-        #print(df.tail()) # Esto es para que se vea el dataframe en la terminal, lo puedes borrar si quieres.
+
+        # depuracion 
+        """
+        print(f"\n Dimensiones: {df.shape[0]} filas × {df.shape[1]} columnas \n")
+        print(df.head()) #primeros 5 filas
+        print("")
+        print(df.info()) #para detectar columnas con nulos 
+        print("")
+        print(df.describe()) #informacion estadistica de las columnas numericas
+        """
+
         return {
             "filas": int(df.shape[0]),
             "columnas": int(df.shape[1]),
