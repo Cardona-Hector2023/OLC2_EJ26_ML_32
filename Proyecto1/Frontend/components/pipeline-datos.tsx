@@ -32,6 +32,11 @@ import type {
   LimpiezaResult,
   Metricas,
 } from '@/lib/types'
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from '@/components/ui/progress'
 
 interface Props {
   onModeloEntrenado: (
@@ -76,6 +81,10 @@ export function PipelineDatos({ onModeloEntrenado }: Props) {
   const [cargando, setCargando] = useState(false)
   const [limpiando, setLimpiando] = useState(false)
   const [entrenando, setEntrenando] = useState(false)
+  
+  const [progreso, setProgreso] = useState(0)
+  const [mostrarProgreso, setMostrarProgreso] = useState(false)
+
 
   function describirError(e: unknown, fallback: string) {
     if (e instanceof ApiError) return e.message
@@ -138,17 +147,43 @@ export function PipelineDatos({ onModeloEntrenado }: Props) {
 
   async function handleEntrenar() {
     setEntrenando(true)
+    setProgreso(0)
+    setMostrarProgreso(true)
+
+    // Simular progreso hasta 95%
+    const interval = setInterval(() => {
+      setProgreso((prev) => {
+        if (prev >= 95) {
+          clearInterval(interval)
+          return 95
+        }
+        const inc = Math.floor(Math.random() * 12) + 4
+        return Math.min(prev + inc, 95)
+      })
+    }, 150)
+
     try {
       const res = await entrenarModelo()
+      clearInterval(interval)
+      setProgreso(100)
+      
+      // Esperar un momento para mostrar el 100% completado
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      
       setEntrenado(true)
       onModeloEntrenado(res.metricas, res)
       toast.success('Entrenamiento completado', {
         description: `Modelo entrenado con éxito. Exactitud: ${(res.metricas.exactitud * 100).toFixed(1)}%.`,
       })
     } catch (e) {
+      clearInterval(interval)
+      setProgreso(0)
       toast.error('Error en el entrenamiento', { description: describirError(e, 'No se pudo entrenar el modelo.') })
     } finally {
       setEntrenando(false)
+      setTimeout(() => {
+        setMostrarProgreso(false)
+      }, 800)
     }
   }
 
@@ -269,14 +304,31 @@ export function PipelineDatos({ onModeloEntrenado }: Props) {
                 Entrena el modelo seleccionado con los datos ya preprocesados.
               </p>
             </div>
-            <Button onClick={handleEntrenar} disabled={!limpieza || entrenando}>
-              {entrenando ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Brain className="h-4 w-4" />
+            <div className="flex flex-col gap-3 max-w-md">
+              <div>
+                <Button onClick={handleEntrenar} disabled={!limpieza || entrenando}>
+                  {entrenando ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Brain className="h-4 w-4" />
+                  )}
+                  Entrenar modelo
+                </Button>
+              </div>
+
+              {mostrarProgreso && (
+                <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-3">
+                  <Progress value={progreso} className="w-full flex-col items-start gap-1.5">
+                    <div className="flex w-full items-center justify-between">
+                      <ProgressLabel className="text-xs font-medium text-foreground">
+                        {progreso === 100 ? '¡Entrenamiento finalizado!' : 'Entrenando Random Forest...'}
+                      </ProgressLabel>
+                      <ProgressValue className="text-xs font-mono font-medium text-primary" />
+                    </div>
+                  </Progress>
+                </div>
               )}
-              Entrenar modelo
-            </Button>
+            </div>
           </div>
         </div>
       </CardContent>
