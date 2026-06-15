@@ -21,6 +21,16 @@
 ---
 ### Tabla de Contenidos
 
+- [1. Análisis Exploratorio de Datos (EDA)](#1-análisis-exploratorio-de-datos-eda)
+- [2. Limpieza de Datos](#2-limpieza-de-datos)
+- [3. Estrategia de Limpieza y Preprocesamiento de Datos Crediticios](#3-estrategia-de-limpieza-y-preprocesamiento-de-datos-crediticios)
+- [4. Propuesta de Modelo: Random Forest](#4-propuesta-de-modelo-random-forest)
+- [5. Justificación Técnica del Modelo](#5-justificación-técnica-del-modelo-random-forest)
+- [6. Entrenamiento y Evaluación](#6-entrenamiento-y-evaluación)
+- [7. Métricas de Evaluación del Modelo](#7-métricas-de-evaluación-del-modelo)
+- [8. Ajuste de Hiperparámetros](#8-ajuste-de-hiperparámetros)
+- [9. Predicciones](#9-predicciones)
+
 
 ### Análisis Exploratorio de Datos (EDA)
 
