@@ -363,7 +363,7 @@ Por el contrario, valores bajos como 10 y 11 limitaron la complejidad de los ár
 
 #### Profundidad máxima de los árboles (`max_depth`)
 
-La profundidad máxima también tuvo un impacto importante en el comportamiento del modelo. Configuraciones con profundidades altas, como 15 y 20 niveles, especialmente cuando se combinaron con valores elevados de `max_leaf_nodes`, generaron modelos con una precisión superior pero con una menor capacidad de detección de casos positivos. Ejemplos de ello son los ajustes 1 y 8, que obtuvieron valores de recall de 75.4 % y 74.9 %, respectivamente.
+La profundidad máxima también tuvo un impacto importante en el comportamiento del modelo. Configuraciones con profundidades altas, como 31 y 45 niveles, especialmente cuando se combinaron con valores elevados de max_leaf_nodes, generaron modelos con una precisión superior pero con una menor capacidad de detección de casos positivos. Ejemplos de ello son los ajustes 4 y 7, que obtuvieron valores de recall de 78.7 % y 78.9 %, respectivamente.
 
 En contraste, al reducir la profundidad a valores más bajos o combinarla con un número limitado de hojas, el recall mejoró considerablemente. Esto sugiere que los árboles muy profundos tienden a ajustarse excesivamente a patrones específicos del conjunto de entrenamiento, reduciendo su capacidad para generalizar correctamente ante nuevos datos.
 
@@ -374,20 +374,19 @@ La cantidad de árboles fue el hiperparámetro que mostró la menor influencia i
 Este comportamiento indica que el modelo alcanza una estabilidad adecuada con una cantidad relativamente moderada de árboles, considerando el tamaño del conjunto de datos utilizado. Por lo tanto, incrementar significativamente el valor de `n_estimators` genera un mayor costo computacional sin aportar mejoras proporcionales en el desempeño predictivo del modelo.
 
 ### Configuración Final Seleccionada
-
-Después de evaluar las diferentes combinaciones de hiperparámetros, se seleccionó el **ajuste 12** como la configuración final del modelo. Esta decisión se tomó considerando tanto el rendimiento predictivo como el impacto operativo que tendría su implementación en un entorno real.
-
-La principal razón de esta elección fue que obtuvo el **F1 Score más alto de todas las configuraciones evaluadas, alcanzando un 77.8 %**. Al ser una métrica que combina precisión y recall, este resultado indica que el modelo logró el mejor equilibrio global entre la capacidad de identificar clientes en riesgo y la confiabilidad de dichas predicciones.
-
-Además, esta configuración redujo la cantidad de **falsos negativos** de 117 a 89 en comparación con la configuración base. En términos prácticos, esto significa que el modelo logró detectar **28 clientes adicionales en riesgo por cada 1,000 evaluados**, fortaleciendo la capacidad de prevención y disminuyendo la probabilidad de aprobar créditos que posteriormente podrían terminar en incumplimiento.
-
-Otro aspecto relevante fue la mejora en el **recall**, que pasó de 75.6 % en la configuración base a **81.4 %**. Esto implica que el modelo es capaz de identificar correctamente aproximadamente **4 de cada 5 clientes que realmente presentan riesgo**, una característica especialmente importante en aplicaciones financieras donde la detección temprana de posibles incumplimientos tiene un alto valor estratégico.
-
-Desde el punto de vista computacional, la configuración seleccionada también resultó eficiente, ya que utiliza una cantidad moderada de árboles de decisión, menor que otras alternativas evaluadas con configuraciones más grandes. Esto permite reducir el tiempo de entrenamiento y el consumo de recursos sin afectar negativamente el rendimiento obtenido.
-
-Finalmente, aunque la cantidad de **falsos positivos** aumentó de 107 a 134, este incremento se consideró aceptable. En términos operativos, significa que aproximadamente **27 clientes adicionales por cada 1,000 evaluados** podrían ser clasificados como riesgosos cuando en realidad no lo son. Sin embargo, el costo asociado a realizar una revisión adicional o aplicar controles más estrictos a estos clientes es significativamente menor que el riesgo financiero derivado de aprobar créditos a personas con una alta probabilidad de incumplimiento.
-
-En conjunto, estos resultados convierten al ajuste 12 en la alternativa más equilibrada y conveniente para el sistema **CreditGuard**, al ofrecer una mejor capacidad de detección de riesgo, un sólido desempeño general y un costo computacional moderado.
+Después de evaluar las diferentes combinaciones de hiperparámetros, se seleccionó el **ajuste 1** como la configuración final del modelo. Esta decisión se tomó considerando tanto el rendimiento predictivo como el impacto operativo que tendría su implementación en un entorno real.
+ 
+La principal razón de esta elección fue que obtuvo el **F1 Score más alto de todas las configuraciones evaluadas, alcanzando un 77.6 %**. Al ser una métrica que combina precisión y recall, este resultado indica que el modelo logró el mejor equilibrio global entre la capacidad de identificar clientes en riesgo y la confiabilidad de dichas predicciones.
+ 
+Además, esta configuración redujo la cantidad de **falsos negativos** de 101 a 91 en comparación con la configuración base. En términos prácticos, esto significa que el modelo logró detectar **10 clientes adicionales en riesgo por cada 1,000 evaluados**, fortaleciendo la capacidad de prevención y disminuyendo la probabilidad de aprobar créditos que posteriormente podrían terminar en incumplimiento.
+ 
+Otro aspecto relevante fue la mejora en el **recall**, que pasó de 78.9 % en la configuración base a **81.0 %**. Esto implica que el modelo es capaz de identificar correctamente aproximadamente **4 de cada 5 clientes que realmente presentan riesgo**, una característica especialmente importante en aplicaciones financieras donde la detección temprana de posibles incumplimientos tiene un alto valor estratégico.
+ 
+Desde el punto de vista computacional, la configuración seleccionada también resultó eficiente, ya que utiliza una cantidad moderada de árboles de decisión (120), menor que otras alternativas evaluadas con configuraciones más grandes. Esto permite reducir el tiempo de entrenamiento y el consumo de recursos sin afectar negativamente el rendimiento obtenido.
+ 
+Finalmente, aunque la cantidad de **falsos positivos** se mantuvo en 133 respecto a los 135 de la configuración base, este resultado se consideró aceptable. En términos operativos, significa que aproximadamente la misma cantidad de clientes por cada 1,000 evaluados podría ser clasificada como riesgosa cuando en realidad no lo son. Sin embargo, el costo asociado a realizar una revisión adicional o aplicar controles más estrictos a estos clientes es significativamente menor que el riesgo financiero derivado de aprobar créditos a personas con una alta probabilidad de incumplimiento.
+ 
+En conjunto, estos resultados convierten al ajuste 1 en la alternativa más equilibrada y conveniente para el sistema **CreditGuard**, al ofrecer una mejor capacidad de detección de riesgo, un sólido desempeño general y un costo computacional moderado.
 
 ## Predicciones
 
