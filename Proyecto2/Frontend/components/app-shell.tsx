@@ -4,7 +4,6 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { useAppState } from "@/components/store"
-import { usingMock } from "@/lib/api"
 import {
   Upload,
   Cpu,
@@ -125,19 +124,11 @@ export function AppShell() {
         </nav>
 
         <div className="border-t border-sidebar-border px-5 py-4">
-          {usingMock ? (
-            <Badge variant="warning" className="w-full justify-center">
-              Modo demo (datos simulados)
-            </Badge>
-          ) : (
-            <Badge variant="success" className="w-full justify-center">
-              Backend conectado
-            </Badge>
-          )}
+          <Badge variant="success" className="w-full justify-center">
+            Backend conectado
+          </Badge>
           <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
-            {usingMock
-              ? "Define NEXT_PUBLIC_API_URL para conectar FastAPI."
-              : process.env.NEXT_PUBLIC_API_URL}
+            {process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}
           </p>
         </div>
       </aside>
