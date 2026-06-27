@@ -16,6 +16,7 @@
 
 import type {
   CsvPreview,
+  LimpiezaResultado,
   TrainConfig,
   TrainResult,
   SegmentsResponse,
@@ -61,7 +62,7 @@ export const api = {
     return request("/datos/cargar/resenas", { method: "POST", body: form })
   },
 
-  cleanData(): Promise<{ mensaje: string; detalles: string[] }> {
+  cleanData(): Promise<LimpiezaResultado> {
     return request("/datos/limpiar", { method: "POST" })
   },
 

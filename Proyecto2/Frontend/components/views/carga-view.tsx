@@ -163,9 +163,17 @@ export function CargaView() {
     try {
       const res = await api.cleanData()
       setCleaned(true)
+      const detalles = [
+        res.freelancers
+          ? `Freelancers: ${res.freelancers.registros_finales} registros finales, ${res.freelancers.duplicados_eliminados} duplicados eliminados y ${res.freelancers.valores_nulos_imputados} nulos imputados.`
+          : null,
+        res.resenas
+          ? `Reseñas: ${res.resenas.registros_finales} registros finales, ${res.resenas.duplicados_eliminados} duplicados eliminados y ${res.resenas.valores_nulos_imputados} nulos imputados.`
+          : null,
+      ].filter(Boolean)
       setFbClean({
         kind: "success",
-        text: `${res.mensaje} ${res.detalles.join(" ")}`,
+        text: [res.mensaje, ...detalles].join(" "),
       })
     } catch (e) {
       setFbClean({ kind: "error", text: (e as Error).message })

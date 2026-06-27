@@ -38,6 +38,19 @@ export interface CsvPreview {
   totalRows: number
 }
 
+export interface ResumenLimpiezaArchivo {
+  registros_originales: number
+  registros_finales: number
+  duplicados_eliminados: number
+  valores_nulos_imputados: number
+}
+
+export interface LimpiezaResultado {
+  freelancers?: ResumenLimpiezaArchivo | null
+  resenas?: ResumenLimpiezaArchivo | null
+  mensaje: string
+}
+
 // Algoritmos soportados
 export type Algoritmo = "kmeans" | "dbscan" | "jerarquico" | "gmm"
 export type Vectorizador = "tfidf" | "bow"
