@@ -65,13 +65,14 @@ def calcular_curva_codo(X, k_min: int = 2, k_max: int = 10) -> list[dict]:
 
     Returns
     -------
-    list[dict] con la forma [{"k": 2, "inercia": 123.4}, ...], lista para
+    list[dict] con la forma [{"k": 2, "inercia": 123.4, "silhouette": 0.5}, ...], lista para
     graficar la curva directamente en el frontend.
     """
     resultado = []
     for k in range(k_min, k_max + 1):
         modelo_k = KMeans(n_clusters=k, n_init=10, random_state=SEED).fit(X)
-        resultado.append({"k": k, "inercia": float(modelo_k.inertia_)})
+        sil = float(silhouette_score(X, modelo_k.labels_))
+        resultado.append({"k": k, "inercia": float(modelo_k.inertia_), "silhouette": sil})
     return resultado
 
 
