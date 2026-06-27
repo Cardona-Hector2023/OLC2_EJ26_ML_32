@@ -57,21 +57,34 @@ def evaluar_modelo(X, labels) -> dict:
 
 def calcular_curva_codo(X, k_min: int = 2, k_max: int = 10) -> list[dict]:
     """
-    Calcula la inercia (WCSS) de KMeans para un rango de valores de k.
+    Calcula la inercia (WCSS) y el Coeficiente de Silueta de KMeans para
+    un rango de valores de k.
 
-    Sirve como apoyo visual para elegir k (método del codo), tal como se
-    pide en la Vista 4: "Gráfica de apoyo a la elección del número de
-    clusters".
+    El enunciado pide explícitamente en la Vista 4 una "Gráfica de apoyo
+    a la elección del número de clusters", con soporte para mostrar tanto
+    la curva del codo (inercia/WCSS) como los coeficientes de silueta
+    para distintos valores de k.
 
     Returns
     -------
-    list[dict] con la forma [{"k": 2, "inercia": 123.4}, ...], lista para
-    graficar la curva directamente en el frontend.
+    list[dict] con la forma:
+        [{"k": 2, "inercia": 123.4, "silhouette": 0.45}, ...]
+    lista para graficar las dos curvas directamente en el frontend.
+
+    Nota: el cálculo de silhouette_score por cada k añade tiempo de
+    cómputo lineal en el número de registros. Para datasets grandes puede
+    ser lento, pero se acepta dado que esta función solo se invoca desde
+    los endpoints de entrenamiento y evaluación, no en tiempo real.
     """
     resultado = []
     for k in range(k_min, k_max + 1):
         modelo_k = KMeans(n_clusters=k, n_init=10, random_state=SEED).fit(X)
-        resultado.append({"k": k, "inercia": float(modelo_k.inertia_)})
+        sil = float(silhouette_score(X, modelo_k.labels_))
+        resultado.append({
+            "k": k,
+            "inercia": float(modelo_k.inertia_),
+            "silhouette": sil,
+        })
     return resultado
 
 

@@ -23,8 +23,14 @@ app.add_middleware(
     allow_headers=["*"],  # Permite todos los headers
 )
 
+import os
+from fastapi.staticfiles import StaticFiles
+
 # Registramos todas las rutas definidas en api.py
 app.include_router(api_router)
+
+os.makedirs("exports", exist_ok=True)
+app.mount("/exports", StaticFiles(directory="exports"), name="exports")
 
 @app.get("/", tags=["Health"])
 def read_root():

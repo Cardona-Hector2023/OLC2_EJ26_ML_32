@@ -74,11 +74,18 @@ class ConfigEntrenamientoResenas(BaseModel):
 
 
 class PuntoCodo(BaseModel):
-    """Un punto de la curva del método del codo y silueta."""
+    """
+    Un punto de la curva del método del codo.
+    - k       : número de clusters evaluado.
+    - inercia : WCSS (Within-Cluster Sum of Squares) para ese k.
+    - silhouette: Coeficiente de Silueta para ese k (solo se calcula
+                  en el endpoint GET /evaluacion; en el entrenamiento
+                  se omite para no penalizar el tiempo de respuesta).
+    """
 
     k: int
     inercia: float
-    silhouette: float
+    silhouette: Optional[float] = None
 
 
 class EvaluacionRespuesta(BaseModel):
@@ -158,8 +165,32 @@ class EntrenamientoResultadoResenas(BaseModel):
     mensaje: str
 
 
-# Ejemplo de molde que se creará a futuro:
-# class TrainConfig(BaseModel):
-#     dataset: str
-#     algoritmo: str
-#     k: int = 3
+# -----------------------------------------------------------------------------
+# Vista 5: Clasificación de Nuevo Registro
+# -----------------------------------------------------------------------------
+
+class ClasificarRequest(BaseModel):
+    """Body esperado por POST /clasificar."""
+    tipo: Literal["freelancer", "resena"]
+    datos: Optional[dict] = None
+    texto: Optional[str] = None
+
+class ClasificarRespuesta(BaseModel):
+    """Respuesta de POST /clasificar."""
+    segmento: int
+    nombreSegmento: str
+    descripcion: str
+    confianza: Optional[float] = None
+
+# -----------------------------------------------------------------------------
+# Vista 6: Exportación de Reportes
+# -----------------------------------------------------------------------------
+
+class ExportarRequest(BaseModel):
+    """Body esperado por POST /exportar."""
+    items: list[str]
+
+class ExportResult(BaseModel):
+    """Respuesta de POST /exportar."""
+    archivos: list[str]
+    mensaje: str

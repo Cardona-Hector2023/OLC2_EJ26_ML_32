@@ -16,8 +16,19 @@ from app.schemas import (
     LimpiezaResultado,
     ResumenLimpiezaArchivo,
     EvaluacionRespuesta,
+    ClasificarRequest,
+    ClasificarRespuesta,
+    ExportarRequest,
+    ExportResult,
 )
 from app.state import global_state
+from app.reports import (
+    exportar_freelancers_segmentado,
+    exportar_resenas_segmentado,
+    exportar_resumen_estadistico,
+    exportar_metricas_evaluacion,
+    exportar_reporte_visual,
+)
 
 # Creamos el enrutador principal que contendrá todos nuestros endpoints
 router = APIRouter()
@@ -333,6 +344,113 @@ async def obtener_evaluacion(dataset: str):
         curva=curva
     )
 
+
+@router.post("/clasificar", response_model=ClasificarRespuesta, tags=["Clasificación"])
+async def clasificar_registro(req: ClasificarRequest):
+    """Clasifica un nuevo registro (freelancer o reseña) usando el modelo ya entrenado."""
+    if req.tipo == "freelancer":
+        if req.datos is None:
+            raise HTTPException(status_code=400, detail="Faltan los datos del freelancer.")
+        
+        if not os.path.exists(RUTA_MODELO_FREELANCERS):
+            raise HTTPException(status_code=400, detail="No hay modelo entrenado de freelancers.")
+        
+        segmento = cl.predecir_nuevo_freelancer(req.datos, COLUMNAS_NUMERICAS, RUTA_MODELO_FREELANCERS)
+        
+        if global_state.df_freelancers_segmentado is None:
+            global_state.df_freelancers_segmentado = _recuperar_df_segmentado("freelancers")
+        
+        df_segmentado = global_state.df_freelancers_segmentado
+        if df_segmentado is None:
+            raise HTTPException(status_code=400, detail="Falta el estado de freelancers para describir el segmento.")
+            
+        df_limpio = df_segmentado.drop(columns=["segmento"])
+        labels = df_segmentado["segmento"].to_numpy()
+        perfiles = cl.perfilar_clusters_numerico(df_limpio, COLUMNAS_NUMERICAS, labels)
+        
+        info = perfiles.get(segmento, {})
+        nombre = info.get("nombre_corto", f"Segmento {segmento}")
+        descripcion = f"Este freelancer pertenece al grupo: {nombre}."
+        
+        return ClasificarRespuesta(segmento=segmento, nombreSegmento=nombre, descripcion=descripcion)
+
+    elif req.tipo == "resena":
+        if not req.texto:
+            raise HTTPException(status_code=400, detail="Falta el texto de la reseña.")
+            
+        if not os.path.exists(RUTA_MODELO_RESENAS):
+            raise HTTPException(status_code=400, detail="No hay modelo entrenado de reseñas.")
+            
+        segmento = cl.predecir_nuevo_comentario(req.texto, RUTA_MODELO_RESENAS)
+        
+        if global_state.df_resenas_segmentado is None:
+            global_state.df_resenas_segmentado = _recuperar_df_segmentado("resenas")
+            
+        df_segmentado = global_state.df_resenas_segmentado
+        if df_segmentado is None:
+            raise HTTPException(status_code=400, detail="Falta el estado de reseñas para describir el segmento.")
+            
+        df_entrenamiento = df_segmentado.drop(columns=["segmento"])
+        labels = df_segmentado["segmento"].to_numpy()
+        
+        artefactos = _cargar_artefactos_modelo("resenas")
+        vectorizador = artefactos["vectorizador"]
+        textos_limpios = df_entrenamiento["texto_reseña"].astype(str).apply(cl.limpiar_texto)
+        matriz = vectorizador.transform(textos_limpios)
+        
+        perfiles = cl.perfilar_clusters_texto(matriz, vectorizador, labels)
+        info = perfiles.get(segmento, {})
+        nombre = info.get("nombre_corto", f"Segmento {segmento}")
+        descripcion = f"Esta reseña se agrupa bajo temas de: {nombre}."
+        
+        return ClasificarRespuesta(segmento=segmento, nombreSegmento=nombre, descripcion=descripcion)
+        
+    else:
+        raise HTTPException(status_code=400, detail="Tipo no válido. Debe ser 'freelancer' o 'resena'.")
+
+
+@router.post("/exportar", response_model=ExportResult, tags=["Exportación"])
+async def exportar_reportes(req: ExportarRequest):
+    """
+    Genera y exporta los reportes seleccionados.
+    Retorna la lista de URLs relativas (/exports/...) para descargar los archivos generados.
+    """
+    if not req.items:
+        raise HTTPException(status_code=400, detail="Debe seleccionar al menos un elemento para exportar.")
+        
+    archivos_generados = []
+    
+    try:
+        for item in req.items:
+            if item == "freelancers_segmentado":
+                ruta = exportar_freelancers_segmentado()
+                if ruta: archivos_generados.append(f"/exports/{ruta}")
+            elif item == "resenas_segmentado":
+                ruta = exportar_resenas_segmentado()
+                if ruta: archivos_generados.append(f"/exports/{ruta}")
+            elif item == "resumen_estadistico":
+                ruta = exportar_resumen_estadistico()
+                if ruta: archivos_generados.append(f"/exports/{ruta}")
+            elif item == "metricas_evaluacion":
+                ruta = exportar_metricas_evaluacion()
+                if ruta: archivos_generados.append(f"/exports/{ruta}")
+            elif item == "reporte_visual":
+                ruta = exportar_reporte_visual()
+                if ruta: archivos_generados.append(f"/exports/{ruta}")
+                
+        if not archivos_generados:
+            raise HTTPException(
+                status_code=400, 
+                detail="No se pudo generar ningún reporte. Asegúrate de tener al menos un modelo entrenado."
+            )
+            
+        mensaje = f"Se generaron {len(archivos_generados)} archivos correctamente."
+        return ExportResult(archivos=archivos_generados, mensaje=mensaje)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante la exportación: {str(e)}")
 
 def process_csv_preview(file: UploadFile) -> tuple[dict, pd.DataFrame]:
     """
