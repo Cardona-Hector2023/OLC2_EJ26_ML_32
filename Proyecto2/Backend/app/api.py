@@ -29,6 +29,12 @@ MODELS_STORAGE_DIR = "models_storage"
 RUTA_MODELO_FREELANCERS = os.path.join(MODELS_STORAGE_DIR, "freelancers_kmeans.pkl")
 RUTA_MODELO_RESENAS = os.path.join(MODELS_STORAGE_DIR, "resenas_kmeans.pkl")
 
+# Rutas para los DataFrames segmentados persistidos en disco.
+# Esto permite recuperar el estado después de un reinicio del servidor
+# sin necesidad de volver a entrenar (Problema 3 — severidad Alta).
+RUTA_DF_FREELANCERS = os.path.join(MODELS_STORAGE_DIR, "freelancers_segmentado.pkl")
+RUTA_DF_RESENAS = os.path.join(MODELS_STORAGE_DIR, "resenas_segmentado.pkl")
+
 # Rango de k explorado para la curva del método del codo. Se calcula
 # siempre sobre este mismo rango, independientemente del k elegido por el
 # usuario para el modelo final.
@@ -57,15 +63,56 @@ def _cargar_artefactos_modelo(dataset: str) -> dict:
         )
 
 
+def _persistir_df_segmentado(df: pd.DataFrame, dataset: str) -> None:
+    """
+    Guarda el DataFrame segmentado en disco para sobrevivir reinicios del
+    servidor (Problema 3 — severidad Alta).
+    """
+    ruta = RUTA_DF_FREELANCERS if dataset == "freelancers" else RUTA_DF_RESENAS
+    try:
+        df.to_pickle(ruta)
+    except Exception as e:
+        # No bloqueamos el flujo de entrenamiento si falla la persistencia,
+        # pero sí lo registramos para que sea visible en los logs.
+        import warnings
+        warnings.warn(f"No se pudo persistir el DataFrame segmentado en '{ruta}': {e}")
+
+
+def _recuperar_df_segmentado(dataset: str) -> pd.DataFrame | None:
+    """
+    Intenta recuperar el DataFrame segmentado desde disco cuando
+    global_state está vacío (p. ej. tras un reinicio del servidor).
+    Devuelve None si el archivo no existe.
+    """
+    ruta = RUTA_DF_FREELANCERS if dataset == "freelancers" else RUTA_DF_RESENAS
+    if not os.path.exists(ruta):
+        return None
+    try:
+        return pd.read_pickle(ruta)
+    except Exception:
+        return None
+
+
 def _formatear_resumen_freelancers(df_segmentado: pd.DataFrame) -> dict:
-    df_limpio = df_segmentado.drop(columns=["segmento"]).reset_index(drop=True)
+    # reset_index para garantizar un RangeIndex 0..n antes de cualquier
+    # operación posicional; los labels se extraen después del reset para
+    # que la alineación label[i] → df.iloc[i] sea siempre explícita y
+    # correcta (Problema 4 — alineación de índices frágil).
+    df_segmentado = df_segmentado.reset_index(drop=True)
     labels = df_segmentado["segmento"].to_numpy()
+    df_limpio = df_segmentado.drop(columns=["segmento"])
 
     artefactos = _cargar_artefactos_modelo("freelancers")
     scaler = artefactos["scaler"]
     X_escalado = scaler.transform(df_limpio[COLUMNAS_NUMERICAS])
 
-    scatter = cl.reducir_dimensiones_numerico(X_escalado, labels)
+    # Si el PCA fue persistido junto con el modelo durante el entrenamiento,
+    # usamos .transform() sin re-ajustar (Problema 1 — PCA re-fit en cada GET).
+    # Si no existe (modelos entrenados antes de esta mejora), caemos al
+    # comportamiento anterior con fit_transform para mantener compatibilidad.
+    pca = artefactos.get("pca")
+    scatter = cl.reducir_dimensiones_numerico(X_escalado, labels, pca=pca)
+
     perfiles = cl.perfilar_clusters_numerico(df_limpio, COLUMNAS_NUMERICAS, labels)
 
     resumen = []
@@ -98,8 +145,11 @@ def _formatear_resumen_freelancers(df_segmentado: pd.DataFrame) -> dict:
 
 
 def _formatear_resumen_resenas(df_segmentado: pd.DataFrame) -> dict:
-    df_entrenamiento = df_segmentado.drop(columns=["segmento"]).reset_index(drop=True)
+    # Mismo patrón que freelancers: reset primero, labels después, para
+    # garantizar alineación posicional explícita (Problema 4).
+    df_segmentado = df_segmentado.reset_index(drop=True)
     labels = df_segmentado["segmento"].to_numpy()
+    df_entrenamiento = df_segmentado.drop(columns=["segmento"])
 
     artefactos = _cargar_artefactos_modelo("resenas")
     vectorizador = artefactos["vectorizador"]
@@ -107,7 +157,12 @@ def _formatear_resumen_resenas(df_segmentado: pd.DataFrame) -> dict:
     textos_limpios = df_entrenamiento["texto_reseña"].astype(str).apply(cl.limpiar_texto)
     matriz = vectorizador.transform(textos_limpios)
 
-    scatter = cl.reducir_dimensiones_texto(matriz, labels)
+    # Igual que con PCA: si el SVD fue persistido, lo reutilizamos sin
+    # re-ajustar. Si no existe, reducir_dimensiones_texto hace fit_transform
+    # internamente como antes (Problema 1 — SVD re-fit en cada GET).
+    svd = artefactos.get("svd")
+    scatter = cl.reducir_dimensiones_texto(matriz, labels, svd=svd)
+
     perfiles = cl.perfilar_clusters_texto(matriz, vectorizador, labels)
 
     resumen = []
@@ -132,7 +187,7 @@ def _formatear_resumen_resenas(df_segmentado: pd.DataFrame) -> dict:
                 "x": punto["x"],
                 "y": punto["y"],
                 "segmento": punto["cluster"],
-                "id": str(df_entrenamiento.iloc[i]["resena_id"]),
+                "id": str(df_entrenamiento.iloc[i]["reseña_id"]),
             }
         )
 
@@ -150,17 +205,26 @@ async def obtener_segmentos(dataset: str):
         raise HTTPException(status_code=400, detail="Dataset no válido.")
 
     if dataset == "freelancers":
+        # Recuperación desde disco si global_state se perdió por reinicio
+        # del servidor (Problema 3 — severidad Alta).
+        if global_state.df_freelancers_segmentado is None:
+            global_state.df_freelancers_segmentado = _recuperar_df_segmentado("freelancers")
         if global_state.df_freelancers_segmentado is None:
             raise HTTPException(
                 status_code=400,
-                detail="No hay segmentos de freelancers disponibles.",
+                detail="No hay segmentos de freelancers disponibles. "
+                       "Entrena el modelo primero.",
             )
         return _formatear_resumen_freelancers(global_state.df_freelancers_segmentado)
 
+    # dataset == "resenas"
+    if global_state.df_resenas_segmentado is None:
+        global_state.df_resenas_segmentado = _recuperar_df_segmentado("resenas")
     if global_state.df_resenas_segmentado is None:
         raise HTTPException(
             status_code=400,
-            detail="No hay segmentos de reseñas disponibles.",
+            detail="No hay segmentos de reseñas disponibles. "
+                   "Entrena el modelo primero.",
         )
     return _formatear_resumen_resenas(global_state.df_resenas_segmentado)
 
@@ -168,6 +232,13 @@ async def obtener_segmentos(dataset: str):
 @router.get("/segmentos/tabla-cruzada", tags=["Segmentos"])
 async def obtener_tabla_cruzada():
     """Calcula la tabla cruzada entre segmentos de freelancers y reseñas."""
+    # Intentamos recuperar desde disco si el servidor se reinició
+    # (Problema 3 — aplica también a este endpoint).
+    if global_state.df_freelancers_segmentado is None:
+        global_state.df_freelancers_segmentado = _recuperar_df_segmentado("freelancers")
+    if global_state.df_resenas_segmentado is None:
+        global_state.df_resenas_segmentado = _recuperar_df_segmentado("resenas")
+
     if global_state.df_freelancers_segmentado is None or global_state.df_resenas_segmentado is None:
         raise HTTPException(
             status_code=400,
@@ -447,11 +518,20 @@ async def entrenar_freelancers(config: ConfigEntrenamientoFreelancers):
         metricas = ev.evaluar_modelo(X_escalado, labels)
         interpretacion = ev.interpretar_metricas(metricas)
         curva_codo = ev.calcular_curva_codo(X_escalado, k_min=K_MIN_CODO, k_max=K_MAX_CODO)
-        dispersion = cl.reducir_dimensiones_numerico(X_escalado, labels)
+
+        # reducir_dimensiones_numerico devuelve también el PCA ajustado para
+        # que podamos persistirlo y evitar re-fit en cada GET /segmentos
+        # (Problema 1 — severidad Media). Ver nota en clustering.py.
+        dispersion, pca_ajustado = cl.reducir_dimensiones_numerico(
+            X_escalado, labels, retornar_reductor=True
+        )
         perfiles = cl.perfilar_clusters_numerico(df_limpio, COLUMNAS_NUMERICAS, labels)
 
         os.makedirs(MODELS_STORAGE_DIR, exist_ok=True)
-        cl.guardar_modelo_numerico(scaler, resultado_km["modelo"], RUTA_MODELO_FREELANCERS)
+        # Persistimos scaler, modelo Y pca para evitar re-fit en GET /segmentos.
+        cl.guardar_modelo_numerico(
+            scaler, resultado_km["modelo"], RUTA_MODELO_FREELANCERS, pca=pca_ajustado
+        )
 
         # Guardamos también el DataFrame con la columna de segmento asignado,
         # para que la Vista 3 (tabla cruzada) y la Vista 6 (exportación)
@@ -459,6 +539,9 @@ async def entrenar_freelancers(config: ConfigEntrenamientoFreelancers):
         df_segmentado = df_limpio.copy()
         df_segmentado["segmento"] = labels
         global_state.df_freelancers_segmentado = df_segmentado
+
+        # Persistencia en disco para sobrevivir reinicios (Problema 3).
+        _persistir_df_segmentado(df_segmentado, "freelancers")
 
         resumen_por_segmento = ", ".join(
             f"Segmento {cid}: {info['cantidad_registros']} registros"
@@ -528,17 +611,28 @@ async def entrenar_resenas(config: ConfigEntrenamientoResenas):
         metricas = ev.evaluar_modelo(matriz, labels)
         interpretacion = ev.interpretar_metricas(metricas)
         curva_codo = ev.calcular_curva_codo(matriz, k_min=K_MIN_CODO, k_max=K_MAX_CODO)
-        dispersion = cl.reducir_dimensiones_texto(matriz, labels)
+
+        # Igual que con PCA: pedimos el SVD ajustado para persistirlo
+        # (Problema 1 — severidad Media). Ver nota en clustering.py.
+        dispersion, svd_ajustado = cl.reducir_dimensiones_texto(
+            matriz, labels, retornar_reductor=True
+        )
         perfiles = cl.perfilar_clusters_texto(matriz, vectorizador, labels)
 
         os.makedirs(MODELS_STORAGE_DIR, exist_ok=True)
-        cl.guardar_modelo_texto(vectorizador, resultado_km["modelo"], RUTA_MODELO_RESENAS)
+        # Persistimos vectorizador, modelo Y svd para evitar re-fit en GET /segmentos.
+        cl.guardar_modelo_texto(
+            vectorizador, resultado_km["modelo"], RUTA_MODELO_RESENAS, svd=svd_ajustado
+        )
 
         # Igual que con freelancers: guardamos el subset entrenado con su
         # columna de segmento, para la tabla cruzada y la exportación.
         df_segmentado = df_entrenamiento.copy()
         df_segmentado["segmento"] = labels
         global_state.df_resenas_segmentado = df_segmentado
+
+        # Persistencia en disco para sobrevivir reinicios (Problema 3).
+        _persistir_df_segmentado(df_segmentado, "resenas")
 
         resumen_por_segmento = ", ".join(
             f"Segmento {cid}: {info['cantidad_registros']} registros"

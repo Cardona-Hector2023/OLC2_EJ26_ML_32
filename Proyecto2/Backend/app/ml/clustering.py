@@ -147,23 +147,48 @@ def entrenar_kmeans(X_vectorizado, n_clusters: int) -> dict:
 
 
 
-def reducir_dimensiones_texto(X_vectorizado, labels) -> list[dict]:
+def reducir_dimensiones_texto(
+    X_vectorizado,
+    labels,
+    svd=None,
+    retornar_reductor: bool = False,
+):
     """
     Reduce la matriz dispersa de texto a 2D con TruncatedSVD (no PCA, ya
     que PCA no opera de forma eficiente sobre matrices dispersas como las
     que produce un vectorizador de texto).
 
+    Parameters
+    ----------
+    X_vectorizado : matriz dispersa
+        Salida del vectorizador ajustado.
+    labels : array-like
+        Etiquetas de cluster por documento.
+    svd : TruncatedSVD | None
+        Si se pasa un SVD ya ajustado (recuperado del .pkl), se usa
+        directamente con .transform() sin re-ajustar. Si es None se crea
+        uno nuevo y se ajusta con fit_transform (comportamiento original).
+    retornar_reductor : bool
+        Si True, devuelve una tupla (scatter, svd_ajustado) en lugar de
+        solo scatter, para que el entrenamiento pueda persistir el SVD.
+
     Returns
     -------
     list[dict] con la forma [{"x": ..., "y": ..., "cluster": ...}, ...],
-    una entrada por documento, lista para un scatter plot en el frontend.
+    o tuple(list[dict], TruncatedSVD) si retornar_reductor=True.
     """
-    svd = TruncatedSVD(n_components=2, random_state=SEED)
-    coordenadas = svd.fit_transform(X_vectorizado)
-    return [
+    if svd is not None:
+        # SVD ya ajustado: solo proyectamos, sin re-fit (Problema 1 — Media).
+        coordenadas = svd.transform(X_vectorizado)
+    else:
+        svd = TruncatedSVD(n_components=2, random_state=SEED)
+        coordenadas = svd.fit_transform(X_vectorizado)
+
+    scatter = [
         {"x": float(coordenadas[i, 0]), "y": float(coordenadas[i, 1]), "cluster": int(labels[i])}
         for i in range(len(labels))
     ]
+    return (scatter, svd) if retornar_reductor else scatter
 
 
 def obtener_terminos_top(matriz_vectorizada, vectorizador, labels, n_terminos: int = 6) -> dict:
@@ -243,16 +268,22 @@ def perfilar_clusters_texto(
     return perfil
 
 
-def guardar_modelo_texto(vectorizador, modelo_kmeans, ruta: str) -> None:
+def guardar_modelo_texto(vectorizador, modelo_kmeans, ruta: str, svd=None) -> None:
     """
     Empaqueta y guarda con joblib el vectorizador ajustado junto con el
     modelo KMeans, para que la Vista 5 pueda recuperarlos sin reentrenar.
+
+    Parameters
+    ----------
+    svd : TruncatedSVD | None
+        Si se pasa, se incluye en el paquete para que GET /segmentos pueda
+        reutilizarlo con .transform() sin re-ajustar (Problema 1 — Media).
     """
     try:
-        joblib.dump(
-            {"vectorizador": vectorizador, "modelo": modelo_kmeans},
-            ruta,
-        )
+        artefacto = {"vectorizador": vectorizador, "modelo": modelo_kmeans}
+        if svd is not None:
+            artefacto["svd"] = svd
+        joblib.dump(artefacto, ruta)
     except Exception as e:
         raise RuntimeError(f"No se pudo guardar el modelo de texto en '{ruta}': {e}")
 
@@ -295,21 +326,47 @@ def escalar_numericas(df: pd.DataFrame, columnas: list[str]):
     return X_escalado, scaler
 
 
-def reducir_dimensiones_numerico(X_escalado, labels) -> list[dict]:
+def reducir_dimensiones_numerico(
+    X_escalado,
+    labels,
+    pca=None,
+    retornar_reductor: bool = False,
+):
     """
     Reduce las variables numéricas escaladas a 2D con PCA (no
     TruncatedSVD, ya que aquí la matriz es densa, no dispersa).
 
+    Parameters
+    ----------
+    X_escalado : np.ndarray
+        Salida del StandardScaler.
+    labels : array-like
+        Etiquetas de cluster por registro.
+    pca : PCA | None
+        Si se pasa un PCA ya ajustado (recuperado del .pkl), se usa
+        directamente con .transform() sin re-ajustar. Si es None se crea
+        uno nuevo y se ajusta con fit_transform (comportamiento original).
+    retornar_reductor : bool
+        Si True, devuelve una tupla (scatter, pca_ajustado) en lugar de
+        solo scatter, para que el entrenamiento pueda persistir el PCA.
+
     Returns
     -------
-    list[dict] con la forma [{"x": ..., "y": ..., "cluster": ...}, ...].
+    list[dict] con la forma [{"x": ..., "y": ..., "cluster": ...}, ...],
+    o tuple(list[dict], PCA) si retornar_reductor=True.
     """
-    pca = PCA(n_components=2, random_state=SEED)
-    coordenadas = pca.fit_transform(X_escalado)
-    return [
+    if pca is not None:
+        # PCA ya ajustado: solo proyectamos, sin re-fit (Problema 1 — Media).
+        coordenadas = pca.transform(X_escalado)
+    else:
+        pca = PCA(n_components=2, random_state=SEED)
+        coordenadas = pca.fit_transform(X_escalado)
+
+    scatter = [
         {"x": float(coordenadas[i, 0]), "y": float(coordenadas[i, 1]), "cluster": int(labels[i])}
         for i in range(len(labels))
     ]
+    return (scatter, pca) if retornar_reductor else scatter
 
 
 def generar_nombre_corto_numerico(
@@ -334,7 +391,11 @@ def generar_nombre_corto_numerico(
     """
     promedio_global = df[columnas].mean()
     desviacion_global = df[columnas].std()
-    labels_serie = pd.Series(labels, index=df.index)
+    # Alineación posicional explícita: convertimos labels a array numpy puro
+    # para que el label[i] siempre caiga en df.index[i], incluso si el df
+    # llegara con un índice no contiguo (Problema 4 — Baja).
+    labels_array = labels.values if hasattr(labels, "values") else labels
+    labels_serie = pd.Series(labels_array, index=df.index)
 
     nombres = {}
     for cluster_id in sorted(set(labels)):
@@ -370,7 +431,10 @@ def perfilar_clusters_numerico(
     -------
     dict {cluster_id: {"nombre_corto": str, "promedios": {...}, "cantidad_registros": int}}
     """
-    labels_serie = pd.Series(labels, index=df.index)
+    # Misma alineación posicional explícita que en generar_nombre_corto_numerico
+    # (Problema 4 — Baja).
+    labels_array = labels.values if hasattr(labels, "values") else labels
+    labels_serie = pd.Series(labels_array, index=df.index)
     nombres_cortos = generar_nombre_corto_numerico(
         df, columnas, labels, n_terminos=n_terminos_nombre
     )
@@ -387,16 +451,22 @@ def perfilar_clusters_numerico(
     return perfil
 
 
-def guardar_modelo_numerico(scaler, modelo_kmeans, ruta: str) -> None:
+def guardar_modelo_numerico(scaler, modelo_kmeans, ruta: str, pca=None) -> None:
     """
     Empaqueta y guarda con joblib el StandardScaler ajustado junto con el
     modelo KMeans, para que la Vista 5 pueda recuperarlos sin reentrenar.
+
+    Parameters
+    ----------
+    pca : PCA | None
+        Si se pasa, se incluye en el paquete para que GET /segmentos pueda
+        reutilizarlo con .transform() sin re-ajustar (Problema 1 — Media).
     """
     try:
-        joblib.dump(
-            {"scaler": scaler, "modelo": modelo_kmeans},
-            ruta,
-        )
+        artefacto = {"scaler": scaler, "modelo": modelo_kmeans}
+        if pca is not None:
+            artefacto["pca"] = pca
+        joblib.dump(artefacto, ruta)
     except Exception as e:
         raise RuntimeError(f"No se pudo guardar el modelo numérico en '{ruta}': {e}")
 
