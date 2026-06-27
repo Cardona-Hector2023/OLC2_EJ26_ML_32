@@ -19,22 +19,29 @@ class AppState:
         # si el usuario presiona "Limpiar Datos" más de una vez.
         self.df_freelancers = None
         self.df_resenas = None
- 
+
         # Aquí guardaremos los DataFrames después de pasar por
         # preprocessor.limpiar_freelancers() / nlp.limpiar_resenas().
         # Estos son los que se usan en Configuración y Entrenamiento,
         # Interpretación de Segmentos, Evaluación, etc.
         self.df_freelancers_limpio = None
         self.df_resenas_limpio = None
- 
+
+        # Aquí guardaremos los DataFrames anteriores, con una columna
+        # adicional "segmento" tras el último entrenamiento exitoso. Se
+        # usan en la tabla cruzada de segmentos (Vista 3) y en la
+        # exportación de reportes (Vista 6), sin necesidad de reentrenar.
+        self.df_freelancers_segmentado = None
+        self.df_resenas_segmentado = None
+
         # Aquí podremos guardar el modelo entrenado
         self.modelo_freelancers = None
         self.modelo_resenas = None
- 
+
     def hay_datos_cargados(self) -> bool:
         """True si al menos uno de los dos archivos fue cargado."""
         return self.df_freelancers is not None or self.df_resenas is not None
- 
+
     def reset_limpieza(self) -> None:
         """
         Limpia el resultado de una limpieza previa, por si el usuario
@@ -42,8 +49,7 @@ class AppState:
         """
         self.df_freelancers_limpio = None
         self.df_resenas_limpio = None
- 
- 
+
+
 # Instancia global (Singleton) a la que accederán los endpoints de api.py
 global_state = AppState()
- 

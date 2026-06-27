@@ -31,6 +31,16 @@ import type {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
+type BackendPerfilSegmento = {
+  cantidad_registros: number
+}
+
+type BackendTrainResponse = {
+  k: number
+  perfiles: Record<string, BackendPerfilSegmento>
+  mensaje: string
+}
+
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -68,11 +78,42 @@ export const api = {
 
   // ---- Entrenamiento ----
   train(config: TrainConfig): Promise<TrainResult> {
-    return request("/modelo/entrenar", {
+    if (config.algoritmo !== "kmeans") {
+      throw new Error(
+        "El backend actual solo soporta entrenamiento con K-Means.",
+      )
+    }
+
+    const path =
+      config.dataset === "freelancers"
+        ? "/entrenar/freelancers"
+        : "/entrenar/resenas"
+
+    const body =
+      config.dataset === "freelancers"
+        ? { k: config.k ?? 4 }
+        : {
+            k: config.k ?? 4,
+            metodo_vectorizacion:
+              config.vectorizador === "bow" ? "Bag of Words" : "TF-IDF",
+          }
+
+    return request<BackendTrainResponse>(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    })
+      body: JSON.stringify(body),
+    }).then((result) => ({
+      dataset: config.dataset,
+      algoritmo: config.algoritmo,
+      nSegmentos: result.k,
+      distribucion: Object.entries(result.perfiles)
+        .map(([segmento, perfil]) => ({
+          segmento: Number(segmento),
+          registros: perfil.cantidad_registros,
+        }))
+        .sort((a, b) => a.segmento - b.segmento),
+      mensaje: result.mensaje,
+    }))
   },
 
   // ---- Segmentos ----

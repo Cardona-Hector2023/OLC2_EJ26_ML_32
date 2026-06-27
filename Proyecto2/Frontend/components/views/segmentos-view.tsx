@@ -172,22 +172,60 @@ export function SegmentosView() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!trained[dataset]) {
+      setData(null)
+      setLoading(false)
+      return
+    }
+
     let active = true
     setLoading(true)
-    api.getSegments(dataset).then((res) => {
-      if (active) {
-        setData(res)
-        setLoading(false)
-      }
-    })
+    api
+      .getSegments(dataset)
+      .then((res) => {
+        if (active) {
+          setData(res)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setData(null)
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+        }
+      })
     return () => {
       active = false
     }
-  }, [dataset])
+  }, [dataset, trained])
 
   useEffect(() => {
-    api.getCrossTab().then(setCrossTab)
-  }, [])
+    if (!trained.freelancers || !trained.resenas) {
+      setCrossTab(null)
+      return
+    }
+
+    let active = true
+    api
+      .getCrossTab()
+      .then((res) => {
+        if (active) {
+          setCrossTab(res)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCrossTab(null)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [trained.freelancers, trained.resenas])
 
   const bothTrained = trained.freelancers && trained.resenas
 
