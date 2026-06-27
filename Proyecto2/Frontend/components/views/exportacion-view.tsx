@@ -82,9 +82,30 @@ export function ExportacionView() {
     setFb(null)
     try {
       const res = await api.exportReports([...selected])
+      
+      // Forzar la descarga creando un Blob para evitar que el navegador abra los PDF en la misma pestaña
+      for (const ruta of res.archivos) {
+        try {
+          const url = `http://localhost:8000${ruta}`
+          const response = await fetch(url)
+          const blob = await response.blob()
+          const blobUrl = window.URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.style.display = "none"
+          a.href = blobUrl
+          a.download = ruta.split("/").pop() || "export"
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(blobUrl)
+          document.body.removeChild(a)
+        } catch (err) {
+          console.error("Error descargando", ruta, err)
+        }
+      }
+
       setFb({
         kind: "success",
-        text: `${res.mensaje} Archivos generados: ${res.archivos.join(", ")}.`,
+        text: `${res.mensaje} Las descargas iniciaron automáticamente.`,
       })
     } catch (e) {
       setFb({ kind: "error", text: (e as Error).message })

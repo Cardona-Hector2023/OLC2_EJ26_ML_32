@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Card,
   CardContent,
@@ -52,6 +52,29 @@ export function ClasificacionView() {
   const [fb, setFb] = useState<Feedback | null>(null)
   const [result, setResult] = useState<ClassifyResult | null>(null)
 
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("clasificacionState")
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.tipo) setTipo(parsed.tipo)
+        if (parsed.form) setForm(parsed.form)
+        if (parsed.categoria) setCategoria(parsed.categoria)
+        if (parsed.texto) setTexto(parsed.texto)
+        if (parsed.result) setResult(parsed.result)
+      }
+    } catch (e) {
+      // Ignorar errores de parsing
+    }
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem("clasificacionState", JSON.stringify({
+      tipo, form, categoria, texto, result
+    }))
+  }, [tipo, form, categoria, texto, result])
+
+
   const modeloDisponible =
     tipo === "freelancer" ? Boolean(trained.freelancers) : Boolean(trained.resenas)
 
@@ -93,9 +116,9 @@ export function ClasificacionView() {
           ? await api.classifyFreelancer({
               ...(Object.fromEntries(
                 NUM_FIELDS.map((f) => [f.key, Number(form[f.key])]),
-              ) as never),
+              ) as Record<string, number>),
               categoria_principal: categoria,
-            })
+            } as any)
           : await api.classifyResena(texto)
       setResult(res)
       setFb({
