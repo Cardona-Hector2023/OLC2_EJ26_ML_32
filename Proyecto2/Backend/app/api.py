@@ -15,6 +15,7 @@ from app.schemas import (
     EntrenamientoResultadoResenas,
     LimpiezaResultado,
     ResumenLimpiezaArchivo,
+    EvaluacionRespuesta,
 )
 from app.state import global_state
 
@@ -282,6 +283,55 @@ async def obtener_tabla_cruzada():
         "columnas": columnas,
         "celdas": celdas,
     }
+
+
+@router.get("/evaluacion", response_model=EvaluacionRespuesta, tags=["Evaluación"])
+async def obtener_evaluacion(dataset: str):
+    """Devuelve las métricas de evaluación del modelo ya entrenado."""
+    if dataset not in {"freelancers", "resenas"}:
+        raise HTTPException(status_code=400, detail="Dataset no válido.")
+
+    if dataset == "freelancers":
+        if global_state.df_freelancers_segmentado is None:
+            global_state.df_freelancers_segmentado = _recuperar_df_segmentado("freelancers")
+        df_segmentado = global_state.df_freelancers_segmentado
+    else:
+        if global_state.df_resenas_segmentado is None:
+            global_state.df_resenas_segmentado = _recuperar_df_segmentado("resenas")
+        df_segmentado = global_state.df_resenas_segmentado
+
+    if df_segmentado is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No hay modelo entrenado para {dataset}. Entrena el modelo primero.",
+        )
+    
+    df_segmentado = df_segmentado.reset_index(drop=True)
+    labels = df_segmentado["segmento"].to_numpy()
+    
+    artefactos = _cargar_artefactos_modelo(dataset)
+    if dataset == "freelancers":
+        df_limpio = df_segmentado.drop(columns=["segmento"])
+        scaler = artefactos["scaler"]
+        X_eval = scaler.transform(df_limpio[COLUMNAS_NUMERICAS])
+    else:
+        df_entrenamiento = df_segmentado.drop(columns=["segmento"])
+        vectorizador = artefactos["vectorizador"]
+        textos_limpios = df_entrenamiento["texto_reseña"].astype(str).apply(cl.limpiar_texto)
+        X_eval = vectorizador.transform(textos_limpios)
+    
+    metricas = ev.evaluar_modelo(X_eval, labels)
+    interpretacion = ev.interpretar_metricas(metricas)
+    curva = ev.calcular_curva_codo(X_eval, k_min=K_MIN_CODO, k_max=K_MAX_CODO)
+    
+    return EvaluacionRespuesta(
+        dataset=dataset,
+        silhouette=metricas["silhouette_score"],
+        daviesBouldin=metricas["davies_bouldin_index"],
+        calinskiHarabasz=metricas["calinski_harabasz_index"],
+        interpretacion=interpretacion,
+        curva=curva
+    )
 
 
 def process_csv_preview(file: UploadFile) -> tuple[dict, pd.DataFrame]:

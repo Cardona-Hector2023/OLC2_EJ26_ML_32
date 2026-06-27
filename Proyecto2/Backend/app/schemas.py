@@ -74,10 +74,22 @@ class ConfigEntrenamientoResenas(BaseModel):
 
 
 class PuntoCodo(BaseModel):
-    """Un punto de la curva del método del codo."""
+    """Un punto de la curva del método del codo y silueta."""
 
     k: int
     inercia: float
+    silhouette: float
+
+
+class EvaluacionRespuesta(BaseModel):
+    """Respuesta del endpoint GET /evaluacion."""
+
+    dataset: str
+    silhouette: float
+    daviesBouldin: float
+    calinskiHarabasz: float
+    interpretacion: str
+    curva: list[PuntoCodo]
 
 
 class PuntoDispersion(BaseModel):
