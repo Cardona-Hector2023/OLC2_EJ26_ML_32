@@ -30,16 +30,16 @@ const CATEGORIAS = [
   "Soporte Administrativo Virtual",
 ]
 
-const NUM_FIELDS: { key: string; label: string; step?: number }[] = [
-  { key: "proyectos_completados", label: "Proyectos completados" },
-  { key: "ingresos_totales", label: "Ingresos totales (USD)" },
-  { key: "tarifa_hora_promedio", label: "Tarifa por hora promedio (USD)" },
-  { key: "anios_experiencia", label: "Años de experiencia" },
-  { key: "tiempo_respuesta_horas", label: "Tiempo de respuesta (horas)", step: 0.1 },
-  { key: "tasa_finalizacion", label: "Tasa de finalización (0–100)" },
-  { key: "calificacion_promedio", label: "Calificación promedio (0–5)", step: 0.1 },
-  { key: "clientes_recurrentes", label: "Clientes recurrentes" },
-  { key: "horas_trabajadas_mes", label: "Horas trabajadas al mes" },
+const NUM_FIELDS: { key: string; label: string; step?: number; placeholder?: string }[] = [
+  { key: "proyectos_completados", label: "Proyectos completados", placeholder: "Ej. 25" },
+  { key: "ingresos_totales", label: "Ingresos totales (USD)", placeholder: "Ej. 8000" },
+  { key: "tarifa_hora_promedio", label: "Tarifa por hora promedio (USD)", placeholder: "Ej. 18" },
+  { key: "anios_experiencia", label: "Años de experiencia", placeholder: "Ej. 3" },
+  { key: "tiempo_respuesta_horas", label: "Tiempo de respuesta (horas)", step: 0.1, placeholder: "Ej. 4" },
+  { key: "tasa_finalizacion", label: "Tasa de finalización (%)", placeholder: "Ej. 92" },
+  { key: "calificacion_promedio", label: "Calificación promedio (0-5)", step: 0.1, placeholder: "Ej. 4.5" },
+  { key: "clientes_recurrentes", label: "Clientes recurrentes", placeholder: "Ej. 6" },
+  { key: "horas_trabajadas_mes", label: "Horas trabajadas al mes", placeholder: "Ej. 120" },
 ]
 
 export function ClasificacionView() {
@@ -191,15 +191,15 @@ export function ClasificacionView() {
               >
                 {NUM_FIELDS.map((f) => (
                   <FieldGroup key={f.key} label={f.label}>
-                    <Input
-                      type="number"
-                      step={f.step ?? 1}
-                      value={form[f.key] ?? ""}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, [f.key]: e.target.value }))
-                      }
-                      placeholder="0"
-                    />
+                      <Input
+                        type="number"
+                        step={f.step ?? 1}
+                        value={form[f.key] ?? ""}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, [f.key]: e.target.value }))
+                        }
+                        placeholder={f.placeholder ?? "0"}
+                      />
                   </FieldGroup>
                 ))}
                 <FieldGroup label="Categoría principal">
@@ -224,7 +224,7 @@ export function ClasificacionView() {
                   disabled={!modeloDisponible}
                   value={texto}
                   onChange={(e) => setTexto(e.target.value)}
-                  placeholder="Escribe aquí la reseña del cliente..."
+                  placeholder="Ej. El freelancer entregó el proyecto antes de tiempo, con excelente calidad y una comunicación fluida durante todo el proceso."
                   className="min-h-32"
                 />
               </FieldGroup>
