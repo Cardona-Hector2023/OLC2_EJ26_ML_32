@@ -19,6 +19,89 @@
 </div>
 
 ---
+
+### Tabla de Contenidos
+
+- [1. Análisis Exploratorio de Datos (EDA - Freelancers)](#1-análisis-exploratorio-de-datos-eda---freelancers)
+  - [Ejemplos de Anios de Experiencia](#ejemplos-de-anios-de-experiencia)
+  - [Grafica de todas las variables](#grafica-de-todas-las-variables)
+  - [Variables monetarias continuas](#variables-monetarias-continuas)
+  - [Variables de porcentaje y calificación (Escalas y Tasas)](#variables-de-porcentaje-y-calificación-escalas-y-tasas)
+  - [Variables de tiempo y experiencia (Continuas/Conteo)](#variables-de-tiempo-y-experiencia-continuasconteo)
+  - [1.1. Detección de Outliers Freelancers](#11-detección-de-outliers-freelancers)
+  - [1.2. Correlaciones observadas Freelancers](#12-correlaciones-observadas-freelancers)
+  - [1.3. Análisis Exploratorio de Datos (EDA - Reseñas)](#13-análisis-exploratorio-de-datos-eda--reseñas)
+- [2. Limpieza y Preprocesamiento](#2-limpieza-y-preprocesamiento)
+  - [2.1. Dataset `freelancers.csv`](#21-dataset-freelancerscsv)
+    - [2.1.1. Filas duplicadas](#211-filas-duplicadas)
+    - [2.1.2. `proyectos_completados`: tipo de dato incorrecto, texto no numérico y valores negativos](#212-proyectos_completados-tipo-de-dato-incorrecto-texto-no-numérico-y-valores-negativos)
+    - [2.1.3. `tarifa_hora_promedio`: tipo de dato incorrecto y nulos](#213-tarifa_hora_promedio-tipo-de-dato-incorrecto-y-nulos)
+    - [2.1.4. `anios_experiencia`: outliers poco plausibles](#214-anios_experiencia-outliers-poco-plausibles)
+    - [2.1.5. `tiempo_respuesta_horas`: nulos](#215-tiempo_respuesta_horas-nulos)
+    - [2.1.6. `tasa_finalizacion`: nulos y valores fuera de rango](#216-tasa_finalizacion-nulos-y-valores-fuera-de-rango)
+    - [2.1.7. `calificacion_promedio`: tipo de dato incorrecto, texto no numérico, valores fuera de rango y nulos](#217-calificacion_promedio-tipo-de-dato-incorrecto-texto-no-numérico-valores-fuera-de-rango-y-nulos)
+    - [2.1.8. Imputación final: mediana vs. media](#218-imputación-final-mediana-vs-media)
+    - [2.1.9. Resultado final del dataset limpio](#219-resultado-final-del-dataset-limpio)
+  - [2.2. Dataset `reseñas_clientes.csv`](#22-dataset-reseñas_clientescsv)
+    - [2.2.1. Cálculo de `longitud_reseña` (paso previo a la limpieza)](#221-cálculo-de-longitud_reseña-paso-previo-a-la-limpieza)
+    - [2.2.2. Filas duplicadas](#222-filas-duplicadas)
+    - [2.2.3. `texto_reseña`: valores nulos](#223-texto_reseña-valores-nulos)
+    - [2.2.4. `fecha_reseña`: valores nulos](#224-fecha_reseña-valores-nulos)
+    - [2.2.5. `categoria_servicio`: valores nulos](#225-categoria_servicio-valores-nulos)
+    - [2.2.6. `freelancer_id` sin correspondencia en `freelancers.csv`](#226-freelancer_id-sin-correspondencia-en-freelancerscsv)
+    - [2.2.7. Resultado final del dataset limpio](#227-resultado-final-del-dataset-limpio)
+  - [2.3. Síntesis del criterio general de limpieza](#23-síntesis-del-criterio-general-de-limpieza)
+- [3. Vectorización de Texto](#3-vectorización-de-texto)
+  - [3.1. Técnica seleccionada](#31-técnica-seleccionada)
+  - [3.2. Parámetros utilizados](#32-parámetros-utilizados)
+    - [3.2.1. Limpieza previa del texto](#321-limpieza-previa-del-texto)
+    - [3.2.2. Stopwords en español](#322-stopwords-en-español)
+    - [3.2.3. N-gramas](#323-n-gramas)
+    - [3.2.4. `max_features`](#324-max_features)
+    - [3.2.5. Frecuencia mínima/máxima de documento (`min_df` / `max_df`)](#325-frecuencia-mínimamáxima-de-documento-min_df--max_df)
+  - [3.3. Comparación entre TF-IDF y Bag of Words](#33-comparación-entre-tf-idf-y-bag-of-words)
+- [4. Selección del Modelo](#4-selección-del-modelo)
+  - [4.1. Algoritmos considerados](#41-algoritmos-considerados)
+  - [4.2. Criterio de selección](#42-criterio-de-selección)
+  - [4.3. Modelo elegido y justificación técnica](#43-modelo-elegido-y-justificación-técnica)
+  - [4.4. Selección del número de clusters (k)](#44-selección-del-número-de-clusters-k)
+  - [4.5. Limitación documentada: separación de clusters en texto](#45-limitación-documentada-separación-de-clusters-en-texto)
+- [5. Entrenamiento y Ajuste de Parámetros](#5-entrenamiento-y-ajuste-de-parámetros)
+  - [5.1. valores explorados](#51-valores-explorados)
+    - [Cluster con valor de k=2 en freelancers](#cluster-con-valor-de-k2-en-freelancers)
+    - [Cluster con valor de k=2 en reseñas](#cluster-con-valor-de-k2-en-reseñas)
+    - [Grafica de Freelancers con valor de k=2](#grafica-de-freelancers-con-valor-de-k2)
+    - [Grafica de Reseñas con valor de k=2](#grafica-de-reseñas-con-valor-de-k2)
+    - [Cluster con valor de k=3 en freelancers](#cluster-con-valor-de-k3-en-freelancers)
+    - [Cluster con valor de k=3 en raseñas](#cluster-con-valor-de-k3-en-raseñas)
+    - [Grafica de Freelancers con valor de k=3](#grafica-de-freelancers-con-valor-de-k3)
+    - [Grafica de Reseñas con valor de k=3](#grafica-de-reseñas-con-valor-de-k3)
+    - [Cluster con valor de k=4 en freelancers](#cluster-con-valor-de-k4-en-freelancers)
+    - [Cluster con valor de k=4 en raseñas](#cluster-con-valor-de-k4-en-raseñas)
+    - [Grafica de Freelancers con valor de k=4](#grafica-de-freelancers-con-valor-de-k4)
+    - [Grafica de Reseñas con valor de k=4](#grafica-de-reseñas-con-valor-de-k4)
+  - [5.3. Impacto de métricas de validación](#53-impacto-de-métricas-de-validación)
+    - [5.3.1. Freelancers: impacto directo de las métricas sobre la elección de `k`](#531-freelancers-impacto-directo-de-las-métricas-sobre-la-elección-de-k)
+    - [5.3.2. Reseñas: impacto de las métricas sobre la estructura temática](#532-reseñas-impacto-de-las-métricas-sobre-la-estructura-temática)
+    - [5.3.3. Conclusión del impacto de las métricas](#533-conclusión-del-impacto-de-las-métricas)
+  - [5.4. Configuración final adoptada con su justificación](#54-configuración-final-adoptada-con-su-justificación)
+    - [5.4.1. Configuración final por dataset](#541-configuración-final-por-dataset)
+    - [5.4.2. Justificación de la configuración de freelancers](#542-justificación-de-la-configuración-de-freelancers)
+    - [5.4.3. Justificación de la configuración de reseñas](#543-justificación-de-la-configuración-de-reseñas)
+    - [5.4.4. Criterios transversales que se mantuvieron en ambos pipelines](#544-criterios-transversales-que-se-mantuvieron-en-ambos-pipelines)
+- [6.2. Evaluación e Interpretación](#62-evaluación-e-interpretación)
+  - [6.2.1. Métricas internas de validación](#621-métricas-internas-de-validación)
+  - [6.2.2. Interpretación de la calidad del agrupamiento](#622-interpretación-de-la-calidad-del-agrupamiento)
+  - [6.2.3. Descripción razonada de los segmentos encontrados](#623-descripción-razonada-de-los-segmentos-encontrados)
+  - [6.2.4. Análisis de la tabla cruzada de segmentos](#624-análisis-de-la-tabla-cruzada-de-segmentos)
+- [7. Clasificación de Nuevos Registros](#7-clasificación-de-nuevos-registros)
+  - [7.1.1. Estrategia de asignación utilizada](#711-estrategia-de-asignación-utilizada)
+  - [7.1.2. Persistencia de modelos y preprocesamiento](#712-persistencia-de-modelos-y-preprocesamiento)
+  - [7.1.3. Flujo de serialización y recuperación](#713-flujo-de-serialización-y-recuperación)
+  - [7.1.4. Justificación técnica de la validez](#714-justificación-técnica-de-la-validez)
+
+---
+
 ### 1. Análisis Exploratorio de Datos (EDA - Freelancers)
 Antes de diseñar el pipeline de limpieza y entrenamiento, se realizó un análisis exploratorio de los datos en un entorno de desarrollo independiente utilizando Google Colab. El objetivo fue comprender mejor la calidad de la información, detectar posibles problemas en el conjunto de datos e identificar patrones y tendencias relevantes para el proyecto CreditGuard. Para apoyar este análisis se utilizó la librería Seaborn, la cual permitió generar diferentes visualizaciones gráficas que facilitaron la interpretación de los datos.
 
@@ -109,6 +192,7 @@ Los datos del archivo de reseñas (resenas_clientes_dev.csv) revelan que los fre
 Existe una correspondencia lógica entre los anios_experiencia, las horas_trabajadas_mes y el volumen de clientes recurrentes. Los freelancers más veteranos no solo gestionan más clientes habituales, sino que optimizan mejor sus jornadas laborales. Un cliente recurrente genera flujos de trabajo más predecibles, lo que permite al freelancer estabilizar sus horas_trabajadas_mes sin depender de las fluctuaciones de la demanda del mercado abierto.
 
 ![clientes](Imagenes/clientes.png)
+![Distribucion](Imagenes/DistroLongitud.png)
 
 
 ## 2. Limpieza y Preprocesamiento
@@ -224,6 +308,10 @@ Las seis columnas superaron el umbral de asimetría (valores entre 1.11 y 3.17 e
 **Justificación del orden (calcular antes de limpiar):** si la limpieza hubiera modificado o reemplazado el contenido de `texto_reseña` antes de calcular su longitud, el valor de `longitud_reseña` reflejaría un texto distinto al original del archivo fuente, perdiendo trazabilidad respecto a los datos crudos.
 
 **Justificación del valor 0 para texto nulo (alternativa descartada: imputar con la mediana, 25 palabras):** a diferencia de las columnas numéricas de `freelancers.csv`, `longitud_reseña` no es un dato faltante que deba estimarse — es una métrica *derivada* directamente de `texto_reseña`. Si el texto es nulo, la cantidad real y exacta de palabras es cero; no hay ambigüedad que requiera una estimación estadística. Imputar con la mediana habría introducido un valor inventado para un texto que no existe, y habría ocultado la señal (longitud = 0) que permite identificar fácilmente, en el EDA, cuáles reseñas carecen de contenido textual real.
+
+**Proceso de implementación en el backend:** la lógica quedó centralizada en `app/ml/nlp.py`. Primero, `calcular_longitud_resena()` toma la columna `texto_reseña` y calcula la cantidad de palabras con `str.split().str.len()`, reemplazando los nulos por `0`. Luego, `agregar_longitud_resena()` crea una copia del DataFrame crudo y agrega la nueva columna sin modificar el texto original. Finalmente, `limpiar_resenas()` verifica si `longitud_reseña` ya existe; si no está presente, la genera antes de cualquier otra transformación, antes de eliminar duplicados y antes de convertir `fecha_reseña` a tipo fecha.
+
+**Exposición al usuario durante la carga:** en `app/api.py`, el endpoint que recibe `reseñas_clientes.csv` también recalcula la columna al guardar el archivo en memoria si el CSV todavía no la trae incluida. De esa forma, la vista previa de la tabla ya muestra `longitud_reseña` desde el momento de la carga, y el mismo valor derivado se conserva en todo el flujo posterior de limpieza, análisis y entrenamiento.
 
 #### 2.2.2 Filas duplicadas
 
@@ -356,6 +444,7 @@ No se aplicó un valor explícito de `min_df` o `max_df` distinto del valor por 
 
 En el barrido de la sección 3.2.4, **Bag of Words obtuvo consistentemente mejor silhouette score que TF-IDF** en todos los valores de `max_features` probados (con la única excepción del extremo más bajo, 20, donde TF-IDF superó ligeramente a BoW). Esto contrasta con la preferencia general por TF-IDF en tareas de NLP, y se explica por una característica particular de este corpus: al tratarse de reseñas cortas con vocabulario relativamente uniforme en frecuencia (sin términos extremadamente comunes que dominen el corpus, dado el filtrado de stopwords), la ponderación inversa de frecuencia de documento que aplica TF-IDF aporta menos ventaja relativa que en corpus más grandes y heterogéneos. Ambas técnicas se mantienen disponibles y seleccionables por el usuario, ya que el enunciado no exige fijar una única técnica.
 
+![Vectorización](Imagenes/vector.png)
 ---
 
 ## 4. Selección del Modelo
@@ -685,7 +774,7 @@ Para mantener coherencia entre entrenamiento y clasificación, el backend serial
 | Predicción | Se ejecuta `predict()` del K-Means persistido. | Se obtiene el segmento asignado al nuevo registro. |
 | Rotulado interpretativo | Se recupera el perfil del cluster desde el estado en memoria o desde disco. | El usuario recibe no solo el número de segmento, sino también su nombre corto y una descripción de negocio. |
 
-#### 5.1.4 Justificación técnica de la validez
+#### 7.1.4 Justificación técnica de la validez
 
 | Decisión | Justificación |
 |---|---|
